@@ -8,9 +8,10 @@ const supabaseAnonKey =
 
 // 檢查是否為有效的 Supabase 配置
 const isValidConfig =
-  supabaseUrl !== "https://tqksgjsikuzhhqravdre.supabase.co" &&
-  supabaseAnonKey !==
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxa3NnanNpa3V6aGhxcmF2ZHJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExMjA5NjYsImV4cCI6MjA2NjY5Njk2Nn0.lRKi7qOEMqRxX51hRZzRjwAbFfOoCZeqXCasUsFzUIo"
+  supabaseUrl && 
+  supabaseAnonKey &&
+  supabaseUrl.startsWith("https://") &&
+  supabaseAnonKey.length > 0
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 

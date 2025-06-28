@@ -204,8 +204,8 @@ export default function AdminUsersPage() {
           <DialogTrigger asChild>
             <Button onClick={() => handleOpenDialog()}>
               <PlusCircle className="mr-2 h-4 w-4" />
-              新增用戶
-            </Button>
+            新增用戶
+          </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -234,9 +234,9 @@ export default function AdminUsersPage() {
                     onChange={(e) => handleInputChange("email", e.target.value)}
                     placeholder="請輸入電子郵件"
                   />
-                </div>
-              </div>
-              
+        </div>
+      </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="phone">電話</Label>
@@ -373,37 +373,37 @@ export default function AdminUsersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>用戶</TableHead>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>用戶</TableHead>
                 <TableHead>聯絡資訊</TableHead>
                 <TableHead>工作資訊</TableHead>
-                <TableHead>畢業年份</TableHead>
+                      <TableHead>畢業年份</TableHead>
                 <TableHead>操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
               {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <div className="flex items-center space-x-3">
-                      <Avatar>
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <div className="flex items-center space-x-3">
+                            <Avatar>
                         <AvatarImage src={user.avatar_url} />
                         <AvatarFallback>
                           {user.name?.charAt(0) || "U"}
                         </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">{user.name}</div>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium">{user.name}</div>
                         <div className="text-sm text-muted-foreground flex items-center gap-1">
                           <Mail className="h-3 w-3" />
                           {user.email}
                         </div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
                     <div className="space-y-1">
                       {user.phone && (
                         <div className="text-sm">{user.phone}</div>
@@ -414,8 +414,8 @@ export default function AdminUsersPage() {
                           {user.location}
                         </div>
                       )}
-                    </div>
-                  </TableCell>
+                          </div>
+                        </TableCell>
                   <TableCell>
                     <div className="space-y-1">
                       {user.company && (
@@ -454,16 +454,16 @@ export default function AdminUsersPage() {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
           
           {users.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               暫無用戶資料
-            </div>
+              </div>
           )}
         </CardContent>
       </Card>
