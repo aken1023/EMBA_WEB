@@ -37,7 +37,25 @@ import {
   Sparkles,
 } from "lucide-react"
 
-const albums = [
+interface Album {
+  id: string
+  title: string
+  description: string
+  coverImage: string
+  photoCount: number
+  date: string
+  location: string
+  createdBy: string
+  createdAt: string
+  likes: number
+  views: number
+  isPublic: boolean
+  eventId?: string
+  classId?: string
+  tags: string[]
+}
+
+const initialAlbums: Album[] = [
   {
     id: "1",
     title: "歲末雅集·校友聚會",
@@ -187,12 +205,78 @@ const photos = [
 ]
 
 export default function PhotosPage() {
+  const [albums, setAlbums] = useState(initialAlbums)
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [sortBy, setSortBy] = useState("latest")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [selectedPhoto, setSelectedPhoto] = useState<any>(null)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [newAlbumData, setNewAlbumData] = useState({
+    title: "",
+    description: "",
+    tags: "",
+    isPublic: true
+  })
+  const [isCreating, setIsCreating] = useState(false)
+
+  const handleCreateAlbum = async () => {
+    console.log('handleCreateAlbum 被調用', newAlbumData)
+    
+    if (!newAlbumData.title.trim()) {
+      alert('請輸入雅集標題')
+      return
+    }
+
+    setIsCreating(true)
+    
+    try {
+      console.log('開始建立相簿')
+      
+      // 創建新相簿對象
+      const newAlbum: Album = {
+        id: (albums.length + 1).toString(),
+        title: newAlbumData.title,
+        description: newAlbumData.description,
+        coverImage: "/placeholder.svg?height=300&width=400",
+        photoCount: 0,
+        date: new Date().toISOString().split('T')[0],
+        location: "待更新",
+        createdBy: "目前用戶",
+        createdAt: new Date().toISOString(),
+        likes: 0,
+        views: 0,
+        isPublic: newAlbumData.isPublic,
+        tags: newAlbumData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+      }
+      
+      console.log('新相簿對象:', newAlbum)
+      
+      // 更新相簿列表
+      setAlbums(prev => {
+        const updated = [...prev, newAlbum]
+        console.log('更新後的相簿列表:', updated)
+        return updated
+      })
+      
+      // 重置表單
+      setNewAlbumData({
+        title: "",
+        description: "",
+        tags: "",
+        isPublic: true
+      })
+      
+      setIsCreateDialogOpen(false)
+      alert('雅集建立成功！')
+      console.log('相簿建立完成')
+    } catch (error) {
+      console.error('建立雅集失敗:', error)
+      alert('建立雅集失敗，請稍後再試')
+    } finally {
+      setIsCreating(false)
+    }
+  }
 
   const filteredAlbums = albums.filter((album) => {
     const matchesSearch =
@@ -334,12 +418,16 @@ export default function PhotosPage() {
               </div>
               <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                 <DialogTrigger asChild>
-                  <label htmlFor="file-upload">
-                    <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                      <Plus className="h-4 w-4 mr-2" />
-                      建立雅集
-                    </Button>
-                  </label>
+                  <Button 
+                    onClick={() => {
+                      console.log('建立雅集按鈕被點擊')
+                      setIsCreateDialogOpen(true)
+                    }}
+                    className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    建立雅集
+                  </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md bg-white/95 backdrop-blur-sm border-amber-200/50">
                   <DialogHeader>
@@ -351,11 +439,13 @@ export default function PhotosPage() {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="album-title" className="text-amber-800">
-                        雅集標題
+                        雅集標題 *
                       </Label>
                       <Input
                         id="album-title"
                         placeholder="輸入雅集標題"
+                        value={newAlbumData.title}
+                        onChange={(e) => setNewAlbumData(prev => ({ ...prev, title: e.target.value }))}
                         className="border-amber-200/50 focus:border-amber-400 focus:ring-amber-200"
                       />
                     </div>
@@ -367,6 +457,8 @@ export default function PhotosPage() {
                         id="album-description"
                         placeholder="描述這個雅集的內容與意境"
                         rows={3}
+                        value={newAlbumData.description}
+                        onChange={(e) => setNewAlbumData(prev => ({ ...prev, description: e.target.value }))}
                         className="border-amber-200/50 focus:border-amber-400 focus:ring-amber-200"
                       />
                     </div>
@@ -376,23 +468,42 @@ export default function PhotosPage() {
                       </Label>
                       <Input
                         id="album-tags"
-                        placeholder="用逗號分隔多個標籤"
+                        placeholder="用逗號分隔多個標籤，例如：聚會,回憶,溫馨"
+                        value={newAlbumData.tags}
+                        onChange={(e) => setNewAlbumData(prev => ({ ...prev, tags: e.target.value }))}
                         className="border-amber-200/50 focus:border-amber-400 focus:ring-amber-200"
                       />
                     </div>
-                    <div className="flex justify-end gap-2">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="album-public"
+                        checked={newAlbumData.isPublic}
+                        onChange={(e) => setNewAlbumData(prev => ({ ...prev, isPublic: e.target.checked }))}
+                        className="rounded border-amber-300 text-amber-600 focus:ring-amber-200"
+                      />
+                      <Label htmlFor="album-public" className="text-amber-800">
+                        公開雅集（其他校友可以瀏覽）
+                      </Label>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4">
                       <Button
                         variant="outline"
-                        onClick={() => setIsCreateDialogOpen(false)}
+                        onClick={() => {
+                          setIsCreateDialogOpen(false)
+                          setNewAlbumData({ title: "", description: "", tags: "", isPublic: true })
+                        }}
+                        disabled={isCreating}
                         className="border-amber-200 hover:bg-amber-50"
                       >
                         取消
                       </Button>
                       <Button
-                        onClick={() => setIsCreateDialogOpen(false)}
-                        className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
+                        onClick={handleCreateAlbum}
+                        disabled={isCreating || !newAlbumData.title.trim()}
+                        className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        建立雅集
+                        {isCreating ? "建立中..." : "建立雅集"}
                       </Button>
                     </div>
                   </div>
