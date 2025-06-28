@@ -2,434 +2,337 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Search, MapPin, Building, Users, Globe, MessageCircle, UserPlus } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Search, MapPin, Building, Calendar, Users, MessageCircle, Mail } from "lucide-react"
 import { searchAlumni } from "@/lib/database"
-import { isSupabaseConfigured } from "@/lib/supabase"
 
-// Mock data for demo mode
-const mockAlumni = [
-  {
-    id: "1",
-    name: "張志明",
-    company: "創新科技股份有限公司",
-    position1: "執行長", // 更新為 position1
-    location: "台北市",
-    graduation_year: 2018,
-    skills: ["AI", "區塊鏈", "數位轉型"],
-    avatar_url: "/placeholder.svg?height=60&width=60",
-    isConnected: false,
-    mutualConnections: 12,
-  },
-  {
-    id: "2",
-    name: "李美華",
-    company: "國際金融集團",
-    position1: "投資總監", // 更新為 position1
-    location: "香港",
-    graduation_year: 2017,
-    skills: ["投資", "風險管理", "金融科技"],
-    avatar_url: "/placeholder.svg?height=60&width=60",
-    isConnected: true,
-    mutualConnections: 8,
-  },
-  {
-    id: "3",
-    name: "王大明",
-    company: "綠能科技公司",
-    position1: "創辦人", // 更新為 position1
-    location: "新竹市",
-    graduation_year: 2019,
-    skills: ["永續能源", "創業", "環保科技"],
-    avatar_url: "/placeholder.svg?height=60&width=60",
-    isConnected: false,
-    mutualConnections: 15,
-  },
-  {
-    id: "4",
-    name: "陳淑芬",
-    company: "醫療器材公司",
-    position1: "營運長", // 更新為 position1
-    location: "台中市",
-    graduation_year: 2016,
-    skills: ["醫療科技", "營運管理", "國際貿易"],
-    avatar_url: "/placeholder.svg?height=60&width=60",
-    isConnected: true,
-    mutualConnections: 6,
-  },
-  {
-    id: "5",
-    name: "林志豪",
-    company: "電商平台",
-    position1: "技術長", // 更新為 position1
-    location: "新加坡",
-    graduation_year: 2020,
-    skills: ["電子商務", "軟體開發", "數據分析"],
-    avatar_url: "/placeholder.svg?height=60&width=60",
-    isConnected: false,
-    mutualConnections: 9,
-  },
-  {
-    id: "6",
-    name: "黃雅婷",
-    company: "品牌行銷公司",
-    position1: "創意總監", // 更新為 position1
-    location: "上海",
-    graduation_year: 2018,
-    skills: ["品牌行銷", "創意設計", "數位行銷"],
-    avatar_url: "/placeholder.svg?height=60&width=60",
-    isConnected: false,
-    mutualConnections: 11,
-  },
-]
-
-const locations = [
-  { name: "台北市", count: 245, coordinates: [25.033, 121.5654] },
-  { name: "新竹市", count: 89, coordinates: [24.8138, 120.9675] },
-  { name: "台中市", count: 156, coordinates: [24.1477, 120.6736] },
-  { name: "高雄市", count: 134, coordinates: [22.6273, 120.3014] },
-  { name: "香港", count: 78, coordinates: [22.3193, 114.1694] },
-  { name: "新加坡", count: 65, coordinates: [1.3521, 103.8198] },
-  { name: "上海", count: 92, coordinates: [31.2304, 121.4737] },
-  { name: "東京", count: 43, coordinates: [35.6762, 139.6503] },
-]
+interface Alumni {
+  id: string
+  name: string
+  email: string
+  company?: string
+  job_title?: string
+  location?: string
+  graduation_year?: number
+  skills?: string[]
+  avatar_url?: string
+  bio?: string
+}
 
 export default function NetworkPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedLocation, setSelectedLocation] = useState("all")
-  const [selectedYear, setSelectedYear] = useState("all")
-  const [alumni, setAlumni] = useState(mockAlumni)
-  const [connections, setConnections] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [locationFilter, setLocationFilter] = useState("")
+  const [graduationYearFilter, setGraduationYearFilter] = useState("")
+  const [skillFilter, setSkillFilter] = useState("")
+  const [alumni, setAlumni] = useState<Alumni[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [totalResults, setTotalResults] = useState(0)
 
+  // 載入初始校友資料
   useEffect(() => {
     loadAlumni()
-    loadConnections()
-  }, [searchTerm, selectedLocation, selectedYear])
+  }, [])
 
-  const loadAlumni = async () => {
-    if (!isSupabaseConfigured) {
-      setAlumni(mockAlumni)
-      setLoading(false)
-      return
-    }
-
+  const loadAlumni = async (
+    query: string = "",
+    location: string = "",
+    graduationYear: string = "",
+    skills: string = ""
+  ) => {
+    setIsLoading(true)
     try {
-      const graduationYear = selectedYear === "all" ? undefined : Number.parseInt(selectedYear)
-      const { data, error } = await searchAlumni(searchTerm, selectedLocation, graduationYear)
+      const filters: any = {}
+      
+      if (location) filters.location = location
+      if (graduationYear) filters.graduation_year = parseInt(graduationYear)
+      if (skills) filters.skills = [skills]
 
+      const { data, error } = await searchAlumni(query, filters)
+      
       if (error) {
-        console.error("Error loading alumni:", error)
-        setAlumni(mockAlumni)
+        console.error("搜尋校友失敗:", error)
+        setAlumni([])
+        setTotalResults(0)
       } else {
         setAlumni(data || [])
+        setTotalResults(data?.length || 0)
       }
     } catch (error) {
-      console.error("Error loading alumni:", error)
-      setAlumni(mockAlumni)
+      console.error("載入校友資料失敗:", error)
+      setAlumni([])
+      setTotalResults(0)
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
-  const loadConnections = async () => {
-    if (!isSupabaseConfigured) {
-      return
-    }
-
-    try {
-      // This would need the current user ID
-      // const { data, error } = await getUserConnections(currentUserId)
-      // if (!error) setConnections(data || [])
-    } catch (error) {
-      console.error("Error loading connections:", error)
-    }
+  const handleSearch = () => {
+    loadAlumni(searchQuery, locationFilter, graduationYearFilter, skillFilter)
   }
 
-  const handleConnect = async (alumniId: string) => {
-    if (!isSupabaseConfigured) {
-      // Demo mode - just update UI
-      setAlumni((prev) => prev.map((person) => (person.id === alumniId ? { ...person, isConnected: true } : person)))
-      return
-    }
-
-    try {
-      // This would need the current user ID
-      // const { error } = await createConnection(currentUserId, alumniId)
-      // if (!error) {
-      //   loadAlumni()
-      // }
-    } catch (error) {
-      console.error("Error creating connection:", error)
-    }
+  const clearFilters = () => {
+    setSearchQuery("")
+    setLocationFilter("")
+    setGraduationYearFilter("")
+    setSkillFilter("")
+    loadAlumni()
   }
 
-  const filteredAlumni = alumni.filter((person) => {
-    const matchesSearch =
-      person.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      person.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      person.skills.some((skill) => skill.toLowerCase().includes(searchTerm.toLowerCase()))
-    const matchesLocation = selectedLocation === "all" || person.location === selectedLocation
-    const matchesYear = selectedYear === "all" || person.graduation_year.toString() === selectedYear
-
-    return matchesSearch && matchesLocation && matchesYear
+  // 獲取所有可能的畢業年份（從當前年份往前推20年）
+  const graduationYears = Array.from({ length: 20 }, (_, i) => {
+    const year = new Date().getFullYear() - i
+    return year.toString()
   })
 
+  // 常見技能列表
+  const commonSkills = [
+    "管理", "行銷", "財務", "策略規劃", "專案管理", "數據分析", 
+    "商業開發", "人力資源", "營運管理", "國際貿易", "創業", "投資"
+  ]
+
+  // 地點列表
+  const locations = [
+    { name: "台北市" },
+    { name: "台中市" },
+    { name: "高雄市" },
+    { name: "新竹市" },
+    { name: "台南市" },
+    { name: "桃園市" },
+    { name: "上海" },
+    { name: "香港" },
+    { name: "新加坡" },
+    { name: "美國" }
+  ]
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="container mx-auto px-4">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">人脈網絡</h1>
-          <p className="text-gray-600">探索全球校友網絡，建立有價值的商業連結</p>
-          {!isSupabaseConfigured && (
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-yellow-800 text-sm">🔧 目前為展示模式，顯示模擬資料</p>
-            </div>
-          )}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">校友網絡</h1>
+          <p className="text-gray-600">
+            探索並連結全球 EMBA 校友，擴展您的專業人脈
+          </p>
         </div>
 
-        <Tabs defaultValue="directory" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="directory">校友名錄</TabsTrigger>
-            <TabsTrigger value="map">全球分布</TabsTrigger>
-            <TabsTrigger value="connections">我的人脈</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="directory" className="space-y-6">
-            {/* Search and Filters */}
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+        {/* Search and Filters */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="h-5 w-5" />
+              搜尋校友
+            </CardTitle>
+            <CardDescription>
+              使用關鍵字、地點、畢業年份或技能來找到相關的校友
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+              <div className="lg:col-span-2">
                 <Input
-                  placeholder="搜尋校友姓名、公司或專業技能..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  placeholder="搜尋姓名、公司或職位..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleSearch()}
                 />
               </div>
-              <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-                <SelectTrigger className="w-full md:w-48">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="所在地" />
+              <Select value={locationFilter} onValueChange={setLocationFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="選擇地點" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">全部地區</SelectItem>
+                  <SelectItem value="">所有地點</SelectItem>
                   {locations.map((location) => (
                     <SelectItem key={location.name} value={location.name}>
-                      {location.name} ({location.count})
+                      {location.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger className="w-full md:w-48">
+              <Select value={graduationYearFilter} onValueChange={setGraduationYearFilter}>
+                <SelectTrigger>
                   <SelectValue placeholder="畢業年份" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">全部年份</SelectItem>
-                  {Array.from({ length: 10 }, (_, i) => 2024 - i).map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}年
+                  <SelectItem value="">所有年份</SelectItem>
+                  {graduationYears.map((year) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={skillFilter} onValueChange={setSkillFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="專業技能" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">所有技能</SelectItem>
+                  {commonSkills.map((skill) => (
+                    <SelectItem key={skill} value={skill}>
+                      {skill}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex gap-2">
+              <Button onClick={handleSearch} className="flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                搜尋
+              </Button>
+              <Button variant="outline" onClick={clearFilters}>
+                清除篩選
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-            {/* Loading State */}
-            {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">載入校友資料中...</p>
-              </div>
-            ) : (
-              /* Alumni Grid */
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredAlumni.map((person) => (
-                  <Card key={person.id} className="hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      <div className="flex items-start space-x-4">
-                        <Avatar className="h-16 w-16">
-                          <AvatarImage src={person.avatar_url || "/placeholder.svg"} />
-                          <AvatarFallback>{person.name[0]}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <CardTitle className="text-lg">{person.name}</CardTitle>
-                          <CardDescription className="flex items-center mt-1">
-                            <Building className="h-3 w-3 mr-1" />
-                            {person.position1}
-                          </CardDescription>
-                          <CardDescription className="flex items-center">
-                            <span className="text-sm">{person.company}</span>
-                          </CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <MapPin className="h-3 w-3 mr-1" />
-                        {person.location} • {person.graduation_year}年畢業
-                      </div>
+        {/* Results Summary */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <p className="text-gray-600">
+              {isLoading ? "搜尋中..." : `找到 ${totalResults} 位校友`}
+            </p>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-gray-400" />
+              <span className="text-sm text-gray-500">
+                活躍校友網絡
+              </span>
+            </div>
+          </div>
+        </div>
 
-                      <div className="flex flex-wrap gap-1">
-                        {person.skills.slice(0, 3).map((skill) => (
-                          <Badge key={skill} variant="secondary" className="text-xs">
-                            {skill}
-                          </Badge>
-                        ))}
-                        {person.skills.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{person.skills.length - 3}
-                          </Badge>
-                        )}
-                      </div>
-
-                      {person.mutualConnections > 0 && (
-                        <div className="flex items-center text-xs text-gray-500">
-                          <Users className="h-3 w-3 mr-1" />
-                          {person.mutualConnections} 位共同聯絡人
-                        </div>
-                      )}
-
-                      <div className="flex gap-2 pt-2">
-                        {person.isConnected ? (
-                          <Button size="sm" variant="outline" className="flex-1 bg-transparent">
-                            <MessageCircle className="h-3 w-3 mr-1" />
-                            發送訊息
-                          </Button>
-                        ) : (
-                          <Button size="sm" className="flex-1" onClick={() => handleConnect(person.id)}>
-                            <UserPlus className="h-3 w-3 mr-1" />
-                            建立連結
-                          </Button>
-                        )}
-                        <Button size="sm" variant="outline">
-                          查看檔案
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="map" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Globe className="h-5 w-5 mr-2" />
-                  全球校友分布
-                </CardTitle>
-                <CardDescription>探索世界各地的校友分布情況</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {/* 這裡可以整合地圖組件，如 Google Maps 或 Mapbox */}
-                <div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center mb-6">
-                  <div className="text-center">
-                    <Globe className="h-12 w-12 mx-auto text-gray-400 mb-2" />
-                    <p className="text-gray-500">互動式地圖將在此顯示</p>
-                    <p className="text-sm text-gray-400">顯示全球校友分布位置</p>
-                  </div>
-                </div>
-
-                {/* Location Statistics */}
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {locations.map((location) => (
-                    <div key={location.name} className="p-4 bg-white rounded-lg border">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">{location.name}</h4>
-                          <p className="text-2xl font-bold text-blue-600">{location.count}</p>
-                          <p className="text-sm text-gray-500">位校友</p>
-                        </div>
-                        <MapPin className="h-8 w-8 text-gray-400" />
+        {/* Alumni Grid */}
+        {isLoading ? (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i} className="animate-pulse">
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+                      <div className="space-y-2">
+                        <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                        <div className="h-3 w-32 bg-gray-200 rounded"></div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="connections" className="space-y-6">
-            <div className="grid md:grid-cols-3 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">我的連結</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-blue-600">127</div>
-                    <p className="text-sm text-gray-600">位校友</p>
+                    <div className="space-y-2">
+                      <div className="h-3 w-full bg-gray-200 rounded"></div>
+                      <div className="h-3 w-3/4 bg-gray-200 rounded"></div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">待處理邀請</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-orange-600">5</div>
-                    <p className="text-sm text-gray-600">個邀請</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">本月新增</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-green-600">12</div>
-                    <p className="text-sm text-gray-600">位校友</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>最近連結的校友</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {filteredAlumni
-                    .filter((person) => person.isConnected)
-                    .map((person) => (
-                      <div key={person.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <Avatar>
-                            <AvatarImage src={person.avatar_url || "/placeholder.svg"} />
-                            <AvatarFallback>{person.name[0]}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h4 className="font-medium">{person.name}</h4>
-                            <p className="text-sm text-gray-600">
-                              {person.position1} • {person.company}
-                            </p>
-                          </div>
-                        </div>
-                        <Button size="sm" variant="outline">
-                          <MessageCircle className="h-3 w-3 mr-1" />
-                          訊息
-                        </Button>
+            ))}
+          </div>
+        ) : alumni.length > 0 ? (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {alumni.map((person) => (
+              <Card key={person.id} className="hover:shadow-lg transition-shadow duration-200">
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    {/* Profile Header */}
+                    <div className="flex items-center space-x-4">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={person.avatar_url} alt={person.name} />
+                        <AvatarFallback>
+                          {person.name.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-lg text-gray-900 truncate">
+                          {person.name}
+                        </h3>
+                        <p className="text-sm text-gray-600 truncate">
+                          {person.job_title} {person.company && `at ${person.company}`}
+                        </p>
                       </div>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                    </div>
+
+                    {/* Details */}
+                    <div className="space-y-2">
+                      {person.location && (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+                          {person.location}
+                        </div>
+                      )}
+                      {person.company && (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Building className="h-4 w-4 mr-2 text-gray-400" />
+                          {person.company}
+                        </div>
+                      )}
+                      {person.graduation_year && (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+                          畢業於 {person.graduation_year}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bio */}
+                    {person.bio && (
+                      <p className="text-sm text-gray-600 line-clamp-3">
+                        {person.bio}
+                      </p>
+                    )}
+
+                    {/* Skills */}
+                    {person.skills && person.skills.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 mb-2">專業技能</p>
+                        <div className="flex flex-wrap gap-1">
+                          {person.skills.slice(0, 4).map((skill, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs">
+                              {skill}
+                            </Badge>
+                          ))}
+                          {person.skills.length > 4 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{person.skills.length - 4} more
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 pt-2">
+                      <Button size="sm" className="flex-1" variant="outline">
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        聯繫
+                      </Button>
+                      <Button size="sm" variant="outline">
+                        <Mail className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                未找到符合條件的校友
+              </h3>
+              <p className="text-gray-600 mb-4">
+                嘗試調整搜尋條件或清除篩選以查看更多結果
+              </p>
+              <Button onClick={clearFilters}>
+                清除篩選
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )

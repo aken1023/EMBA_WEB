@@ -4,68 +4,448 @@ import type { Event, ForumPost, Paper } from "./supabase"
 // 檢查 Supabase 是否已配置
 function checkSupabaseConfig() {
   if (!isSupabaseConfigured) {
-    console.warn("Supabase is not configured. Using mock data.")
+    console.warn("Supabase is not configured.")
     return false
   }
   return true
 }
 
-// 活動相關函數
-export async function getEvents() {
+// 用戶相關函數
+export async function getUsers() {
   if (!checkSupabaseConfig()) {
-    // 返回模擬資料
-    return {
-      data: [
-        {
-          id: "1",
-          title: "2024年度校友聚會",
-          description: "年度盛會即將舉行，歡迎所有校友踴躍參與",
-          date: "2024-12-15",
-          time: "18:00-22:00",
-          location: "台北君悅酒店",
-          max_attendees: 200,
-          price: 1500,
-          category: "聚會",
-          status: "報名中",
-          image_url: "/elegant-ballroom-event.png",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ],
-      error: null,
-    }
+    return { data: [], error: new Error("Supabase not configured") }
   }
 
   try {
-    const { data, error } = await supabase
-      .from("events")
-      .select(`
-        *,
-        event_registrations(count)
-      `)
-      .order("date", { ascending: true })
+    const { data: users, error } = await supabase
+      .from("users")
+      .select("*")
+      .order("created_at", { ascending: false })
 
     if (error) throw error
-
-    return { data, error: null }
+    return { data: users, error: null }
   } catch (error) {
-    return { data: null, error }
+    console.error("Error fetching users:", error)
+    return { data: [], error }
   }
 }
 
-export async function createEvent(eventData: Omit<Event, "id" | "created_at" | "updated_at">) {
+export async function createUser(userData: any) {
   if (!checkSupabaseConfig()) {
     return { data: null, error: new Error("Supabase not configured") }
   }
 
   try {
-    const { data, error } = await supabase.from("events").insert([eventData]).select().single()
+    const { data, error } = await supabase
+      .from("users")
+      .insert([userData])
+      .select()
+      .single()
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error("Error creating user:", error)
+    return { data: null, error }
+  }
+}
+
+export async function updateUser(id: string, userData: any) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .update(userData)
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error("Error updating user:", error)
+    return { data: null, error }
+  }
+}
+
+export async function deleteUser(id: string) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { error } = await supabase
+      .from("users")
+      .delete()
+      .eq("id", id)
+
+    if (error) throw error
+    return { data: null, error: null }
+  } catch (error) {
+    console.error("Error deleting user:", error)
+    return { data: null, error }
+  }
+}
+
+// 活動相關函數
+export async function getEvents() {
+  if (!checkSupabaseConfig()) {
+    return { data: [], error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data: events, error } = await supabase
+      .from("events")
+      .select(`
+        *,
+        event_registrations(count)
+      `)
+      .order("created_at", { ascending: false })
+
+    if (error) throw error
+
+    // 處理報名人數統計
+    const eventsWithCount = events?.map(event => ({
+      ...event,
+      event_registrations: [{ count: event.event_registrations?.length || 0 }]
+    })) || []
+
+    return { data: eventsWithCount, error: null }
+  } catch (error) {
+    console.error("Error fetching events:", error)
+    return { data: [], error }
+  }
+}
+
+export async function createEvent(eventData: any) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("events")
+      .insert([eventData])
+      .select()
+      .single()
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error("Error creating event:", error)
+    return { data: null, error }
+  }
+}
+
+export async function updateEvent(id: string, eventData: any) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("events")
+      .update(eventData)
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error("Error updating event:", error)
+    return { data: null, error }
+  }
+}
+
+export async function deleteEvent(id: string) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { error } = await supabase
+      .from("events")
+      .delete()
+      .eq("id", id)
+
+    if (error) throw error
+    return { data: null, error: null }
+  } catch (error) {
+    console.error("Error deleting event:", error)
+    return { data: null, error }
+  }
+}
+
+// 論壇相關函數
+export async function getForumPosts() {
+  if (!checkSupabaseConfig()) {
+    return { data: [], error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data: posts, error } = await supabase
+      .from("forum_posts")
+      .select(`
+        *,
+        users!forum_posts_author_id_fkey(id, name, avatar_url),
+        forum_categories(id, name, color),
+        forum_replies(count)
+      `)
+      .order("created_at", { ascending: false })
+
+    if (error) throw error
+
+    // 處理回覆數統計
+    const postsWithReplies = posts?.map(post => ({
+      ...post,
+      replies_count: post.forum_replies?.length || 0,
+      forum_replies: undefined // 移除 count 陣列
+    })) || []
+
+    return { data: postsWithReplies, error: null }
+  } catch (error) {
+    console.error("Error fetching forum posts:", error)
+    return { data: [], error }
+  }
+}
+
+export async function getForumCategories() {
+  if (!checkSupabaseConfig()) {
+    return { data: [], error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data: categories, error } = await supabase
+      .from("forum_categories")
+      .select("*")
+      .order("name", { ascending: true })
+
+    if (error) throw error
+    return { data: categories, error: null }
+  } catch (error) {
+    console.error("Error fetching forum categories:", error)
+    return { data: [], error }
+  }
+}
+
+export async function createForumPost(postData: any) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("forum_posts")
+      .insert([postData])
+      .select()
+      .single()
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error("Error creating forum post:", error)
+    return { data: null, error }
+  }
+}
+
+export async function updateForumPost(id: string, postData: any) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("forum_posts")
+      .update(postData)
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error("Error updating forum post:", error)
+    return { data: null, error }
+  }
+}
+
+export async function deleteForumPost(id: string) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { error } = await supabase
+      .from("forum_posts")
+      .delete()
+      .eq("id", id)
+
+    if (error) throw error
+    return { data: null, error: null }
+  } catch (error) {
+    console.error("Error deleting forum post:", error)
+    return { data: null, error }
+  }
+}
+
+// 論文相關函數
+export async function getPapers() {
+  if (!checkSupabaseConfig()) {
+    return { data: [], error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data: papers, error } = await supabase
+      .from("papers")
+      .select(`
+        *,
+        paper_authors(
+          users(id, name, email)
+        )
+      `)
+      .order("created_at", { ascending: false })
+
+    if (error) throw error
+
+    // 處理作者資料
+    const papersWithAuthors = papers?.map(paper => ({
+      ...paper,
+      authors: paper.paper_authors?.map((pa: any) => pa.users) || []
+    })) || []
+
+    return { data: papersWithAuthors, error: null }
+  } catch (error) {
+    console.error("Error fetching papers:", error)
+    return { data: [], error }
+  }
+}
+
+export async function createPaper(paperData: any) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("papers")
+      .insert([paperData])
+      .select()
+      .single()
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error("Error creating paper:", error)
+    return { data: null, error }
+  }
+}
+
+export async function updatePaper(id: string, paperData: any) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("papers")
+      .update(paperData)
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error("Error updating paper:", error)
+    return { data: null, error }
+  }
+}
+
+export async function deletePaper(id: string) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { error } = await supabase
+      .from("papers")
+      .delete()
+      .eq("id", id)
+
+    if (error) throw error
+    return { data: null, error: null }
+  } catch (error) {
+    console.error("Error deleting paper:", error)
+    return { data: null, error }
+  }
+}
+
+// 搜尋校友函數
+export async function searchAlumni(query: string = '', filters: any = {}) {
+  if (!checkSupabaseConfig()) {
+    return { data: [], error: new Error("Supabase not configured") }
+  }
+
+  try {
+    let supabaseQuery = supabase
+      .from("users")
+      .select("*")
+
+    // 加入搜尋條件
+    if (query) {
+      supabaseQuery = supabaseQuery.or(`name.ilike.%${query}%,company.ilike.%${query}%,job_title.ilike.%${query}%`)
+    }
+
+    // 加入篩選條件
+    if (filters.location) {
+      supabaseQuery = supabaseQuery.eq("location", filters.location)
+    }
+
+    if (filters.graduation_year) {
+      supabaseQuery = supabaseQuery.eq("graduation_year", filters.graduation_year)
+    }
+
+    if (filters.skills && filters.skills.length > 0) {
+      supabaseQuery = supabaseQuery.overlaps("skills", filters.skills)
+    }
+
+    const { data, error } = await supabaseQuery
+      .order("name", { ascending: true })
+      .limit(50)
+
+    if (error) throw error
+    return { data: data || [], error: null }
+  } catch (error) {
+    console.error("Error searching alumni:", error)
+    return { data: [], error }
+  }
+}
+
+// 相簿相關函數
+export async function getAlbums() {
+  if (!checkSupabaseConfig()) {
+    return { data: [], error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("albums")
+      .select(`
+        *,
+        events(title, date, location),
+        photos(count)
+      `)
+      .order("created_at", { ascending: false })
 
     if (error) throw error
 
     return { data, error: null }
   } catch (error) {
-    return { data: null, error }
+    return { data: [], error }
   }
 }
 
@@ -95,138 +475,9 @@ export async function registerForEvent(eventId: string, userId: string) {
   }
 }
 
-// 論壇相關函數
-export async function getForumPosts() {
-  if (!checkSupabaseConfig()) {
-    // 返回模擬資料
-    return {
-      data: [
-        {
-          id: "1",
-          title: "AI時代的商業轉型策略分享",
-          content: "最近公司導入AI系統，想和大家分享一些實戰經驗...",
-          category_id: "1",
-          author_id: "1",
-          tags: ["AI", "數位轉型"],
-          is_hot: true,
-          views: 234,
-          likes: 45,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ],
-      error: null,
-    }
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from("forum_posts")
-      .select(`
-        *,
-        users(name, avatar_url),
-        forum_categories(name, color),
-        forum_replies(count)
-      `)
-      .order("created_at", { ascending: false })
-
-    if (error) throw error
-
-    return { data, error: null }
-  } catch (error) {
-    return { data: null, error }
-  }
-}
-
-export async function createForumPost(
-  postData: Omit<ForumPost, "id" | "views" | "likes" | "created_at" | "updated_at">,
-) {
-  if (!checkSupabaseConfig()) {
-    return { data: null, error: new Error("Supabase not configured") }
-  }
-
-  try {
-    const { data, error } = await supabase.from("forum_posts").insert([postData]).select().single()
-
-    if (error) throw error
-
-    return { data, error: null }
-  } catch (error) {
-    return { data: null, error }
-  }
-}
-
-// 論文相關函數
-export async function getPapers() {
-  if (!checkSupabaseConfig()) {
-    // 返回模擬資料
-    return {
-      data: [
-        {
-          id: "1",
-          title: "數位轉型對中小企業營運效率之影響研究",
-          abstract: "本研究探討數位轉型策略如何影響中小企業的營運效率...",
-          category: "管理策略",
-          keywords: ["數位轉型", "中小企業"],
-          journal: "台灣管理學報",
-          publish_date: "2024-10-15",
-          pages: 45,
-          is_open_access: true,
-          allow_comments: true,
-          status: "已發表",
-          downloads: 234,
-          views: 1567,
-          likes: 89,
-          rating: 4.8,
-          created_by: "1",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ],
-      error: null,
-    }
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from("papers")
-      .select(`
-        *,
-        paper_authors(name, affiliation, is_primary, order_index),
-        users(name, avatar_url)
-      `)
-      .eq("status", "已發表")
-      .order("created_at", { ascending: false })
-
-    if (error) throw error
-
-    return { data, error: null }
-  } catch (error) {
-    return { data: null, error }
-  }
-}
-
-export async function createPaper(
-  paperData: Omit<Paper, "id" | "downloads" | "views" | "likes" | "rating" | "created_at" | "updated_at">,
-) {
-  if (!checkSupabaseConfig()) {
-    return { data: null, error: new Error("Supabase not configured") }
-  }
-
-  try {
-    const { data, error } = await supabase.from("papers").insert([paperData]).select().single()
-
-    if (error) throw error
-
-    return { data, error: null }
-  } catch (error) {
-    return { data: null, error }
-  }
-}
-
 export async function getUserPapers(userId: string) {
   if (!checkSupabaseConfig()) {
-    return { data: [], error: null }
+    return { data: [], error: new Error("Supabase not configured") }
   }
 
   try {
@@ -243,28 +494,32 @@ export async function getUserPapers(userId: string) {
 
     return { data, error: null }
   } catch (error) {
-    return { data: null, error }
+    return { data: [], error }
   }
 }
 
 // 人脈相關函數
-export async function searchAlumni(searchTerm = "", locationFilter = "", graduationYearFilter?: number) {
+export async function getConnections(userId: string) {
   if (!checkSupabaseConfig()) {
-    return { data: [], error: null }
+    return { data: [], error: new Error("Supabase not configured") }
   }
 
   try {
-    const { data, error } = await supabase.rpc("search_alumni", {
-      search_term: searchTerm,
-      location_filter: locationFilter,
-      graduation_year_filter: graduationYearFilter,
-    })
+    const { data, error } = await supabase
+      .from("connections")
+      .select(`
+        *,
+        requester:users!requester_id(id, name, avatar_url, company, job_title),
+        addressee:users!addressee_id(id, name, avatar_url, company, job_title)
+      `)
+      .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`)
+      .eq("status", "accepted")
 
     if (error) throw error
 
     return { data, error: null }
   } catch (error) {
-    return { data: null, error }
+    return { data: [], error }
   }
 }
 
@@ -302,7 +557,7 @@ export async function updateConnectionStatus(connectionId: string, status: strin
   try {
     const { data, error } = await supabase
       .from("connections")
-      .update({ status })
+      .update({ status, updated_at: new Date().toISOString() })
       .eq("id", connectionId)
       .select()
       .single()
@@ -317,7 +572,7 @@ export async function updateConnectionStatus(connectionId: string, status: strin
 
 export async function getUserConnections(userId: string) {
   if (!checkSupabaseConfig()) {
-    return { data: [], error: null }
+    return { data: [], error: new Error("Supabase not configured") }
   }
 
   try {
@@ -325,34 +580,45 @@ export async function getUserConnections(userId: string) {
       .from("connections")
       .select(`
         *,
-        requester:users!connections_requester_id_fkey(id, name, avatar_url, company, position1),
-        addressee:users!connections_addressee_id_fkey(id, name, avatar_url, company, position1)
+        requester:users!requester_id(id, name, avatar_url, company, job_title),
+        addressee:users!addressee_id(id, name, avatar_url, company, job_title)
       `)
       .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`)
-      .eq("status", "accepted")
 
     if (error) throw error
 
     return { data, error: null }
   } catch (error) {
-    return { data: null, error }
+    return { data: [], error }
   }
 }
 
-// 統計相關函數
 export async function getUserStats(userId: string) {
   if (!checkSupabaseConfig()) {
-    return { data: { papers_count: 0, events_attended: 0, forum_posts: 0, connections_count: 0 }, error: null }
+    return { data: null, error: new Error("Supabase not configured") }
   }
 
   try {
-    const { data, error } = await supabase.rpc("get_user_stats", {
-      user_uuid: userId,
-    })
+    const [papersResult, connectionsResult, eventsResult, postsResult] = await Promise.all([
+      supabase.from("papers").select("id", { count: "exact" }).eq("created_by", userId),
+      supabase
+        .from("connections")
+        .select("id", { count: "exact" })
+        .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`)
+        .eq("status", "accepted"),
+      supabase.from("event_registrations").select("id", { count: "exact" }).eq("user_id", userId),
+      supabase.from("forum_posts").select("id", { count: "exact" }).eq("author_id", userId),
+    ])
 
-    if (error) throw error
-
-    return { data, error: null }
+    return {
+      data: {
+        papers_count: papersResult.count || 0,
+        connections_count: connectionsResult.count || 0,
+        events_attended: eventsResult.count || 0,
+        forum_posts: postsResult.count || 0,
+      },
+      error: null,
+    }
   } catch (error) {
     return { data: null, error }
   }
@@ -360,26 +626,32 @@ export async function getUserStats(userId: string) {
 
 export async function getTrendingPapers(limit = 10) {
   if (!checkSupabaseConfig()) {
-    return { data: [], error: null }
+    return { data: [], error: new Error("Supabase not configured") }
   }
 
   try {
-    const { data, error } = await supabase.rpc("get_trending_papers", {
-      limit_count: limit,
-    })
+    const { data, error } = await supabase
+      .from("papers")
+      .select(`
+        *,
+        paper_authors(name, affiliation, is_primary),
+        users(name, avatar_url)
+      `)
+      .eq("status", "已發表")
+      .order("views", { ascending: false })
+      .limit(limit)
 
     if (error) throw error
 
     return { data, error: null }
   } catch (error) {
-    return { data: null, error }
+    return { data: [], error }
   }
 }
 
-// 通知相關函數
 export async function getUserNotifications(userId: string) {
   if (!checkSupabaseConfig()) {
-    return { data: [], error: null }
+    return { data: [], error: new Error("Supabase not configured") }
   }
 
   try {
@@ -394,7 +666,7 @@ export async function getUserNotifications(userId: string) {
 
     return { data, error: null }
   } catch (error) {
-    return { data: null, error }
+    return { data: [], error }
   }
 }
 

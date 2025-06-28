@@ -4,368 +4,466 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Search, Filter, MoreHorizontal, UserPlus, Download, Eye, Edit, Trash2, Ban, CheckCircle } from "lucide-react"
-import { isSupabaseConfigured, supabase } from "@/lib/supabase"
+import { PlusCircle, Edit, Trash2, Users, Mail, Building, MapPin } from "lucide-react"
+import { getUsers, createUser, updateUser, deleteUser } from "@/lib/database"
+import { toast } from "sonner"
 
-// Mock data for demo mode
-const mockUsers = [
-  {
-    id: "1",
-    name: "張志明",
-    email: "zhang.zhiming@example.com",
-    company: "創新科技股份有限公司",
-    position1: "執行長", // 更新為 position1
-    graduation_year: 2018,
-    location: "台北市",
-    status: "active",
-    created_at: "2024-01-15",
-    updated_at: "2024-11-20",
-    avatar_url: "/business-executive.png",
-  },
-  {
-    id: "2",
-    name: "李美華",
-    email: "li.meihua@example.com",
-    company: "國際金融集團",
-    position1: "投資總監", // 更新為 position1
-    graduation_year: 2017,
-    location: "香港",
-    status: "active",
-    created_at: "2024-02-20",
-    updated_at: "2024-11-19",
-    avatar_url: "/placeholder.svg",
-  },
-  {
-    id: "3",
-    name: "王大明",
-    email: "wang.daming@example.com",
-    company: "綠能科技公司",
-    position1: "創辦人", // 更新為 position1
-    graduation_year: 2019,
-    location: "新竹市",
-    status: "pending",
-    created_at: "2024-11-18",
-    updated_at: "2024-11-18",
-    avatar_url: "/placeholder.svg",
-  },
-  {
-    id: "4",
-    name: "陳淑芬",
-    email: "chen.shufen@example.com",
-    company: "醫療器材公司",
-    position1: "營運長", // 更新為 position1
-    graduation_year: 2016,
-    location: "台中市",
-    status: "suspended",
-    created_at: "2023-12-10",
-    updated_at: "2024-11-15",
-    avatar_url: "/placeholder.svg",
-  },
-]
+interface User {
+  id: string
+  email: string
+  name: string
+  avatar_url?: string
+  phone?: string
+  company?: string
+  job_title?: string
+  graduation_year?: number
+  location?: string
+  website?: string
+  bio?: string
+  skills?: string[]
+  interests?: string[]
+  created_at: string
+  updated_at: string
+}
 
-export default function UsersManagement() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [yearFilter, setYearFilter] = useState("all")
-  const [users, setUsers] = useState(mockUsers)
-  const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState({
-    total: 2547,
-    active: 2489,
-    pending: 45,
-    suspended: 13,
-  })
+const initialUserData = {
+  email: "",
+  name: "",
+  avatar_url: "",
+  phone: "",
+  company: "",
+      job_title: "",
+  graduation_year: 2024,
+  location: "",
+  website: "",
+  bio: "",
+  skills: [],
+  interests: []
+}
+
+export default function AdminUsersPage() {
+  const [users, setUsers] = useState<User[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [formData, setFormData] = useState<any>(initialUserData)
+  const [skillsInput, setSkillsInput] = useState("")
+  const [interestsInput, setInterestsInput] = useState("")
 
   useEffect(() => {
     loadUsers()
-    loadStats()
   }, [])
 
   const loadUsers = async () => {
-    if (!isSupabaseConfigured) {
-      setUsers(mockUsers)
-      setLoading(false)
-      return
-    }
-
+    setIsLoading(true)
     try {
-      const { data, error } = await supabase.from("users").select("*").order("created_at", { ascending: false })
-
+      const { data, error } = await getUsers()
       if (error) {
-        console.error("Error loading users:", error)
-        setUsers(mockUsers)
+        toast.error("載入用戶資料失敗")
+        console.error(error)
       } else {
-        // Add status field for demo (this would come from your user management system)
-        const usersWithStatus =
-          data?.map((user) => ({
-            ...user,
-            status: "active", // This would be determined by your business logic
-          })) || []
-        setUsers(usersWithStatus)
+        setUsers(data || [])
       }
     } catch (error) {
-      console.error("Error loading users:", error)
-      setUsers(mockUsers)
+      toast.error("載入用戶資料失敗")
+      console.error(error)
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
-  const loadStats = async () => {
-    if (!isSupabaseConfigured) {
+  const handleOpenDialog = (user?: User) => {
+    if (user) {
+      setEditingUser(user)
+      setFormData({
+        ...user,
+        graduation_year: user.graduation_year || 2024
+      })
+      setSkillsInput(user.skills?.join(", ") || "")
+      setInterestsInput(user.interests?.join(", ") || "")
+    } else {
+      setEditingUser(null)
+      setFormData(initialUserData)
+      setSkillsInput("")
+      setInterestsInput("")
+    }
+    setIsDialogOpen(true)
+  }
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false)
+    setEditingUser(null)
+    setFormData(initialUserData)
+    setSkillsInput("")
+    setInterestsInput("")
+  }
+
+  const handleInputChange = (field: string, value: any) => {
+    setFormData((prev: typeof initialUserData) => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const handleSubmit = async () => {
+    try {
+      const userData = {
+        ...formData,
+        skills: skillsInput.split(",").map(s => s.trim()).filter(s => s),
+        interests: interestsInput.split(",").map(s => s.trim()).filter(s => s),
+        graduation_year: parseInt(formData.graduation_year) || 2024
+      }
+
+      if (editingUser) {
+        const { error } = await updateUser(editingUser.id, userData)
+        if (error) {
+          toast.error("更新用戶失敗")
+          return
+        }
+        toast.success("用戶更新成功")
+      } else {
+        const { error } = await createUser(userData)
+        if (error) {
+          toast.error("創建用戶失敗")
+          return
+        }
+        toast.success("用戶創建成功")
+      }
+
+      handleCloseDialog()
+      loadUsers()
+    } catch (error) {
+      toast.error(editingUser ? "更新用戶失敗" : "創建用戶失敗")
+      console.error(error)
+    }
+  }
+
+  const handleDelete = async (userId: string, userName: string) => {
+    if (!confirm(`確定要刪除用戶 "${userName}" 嗎？此操作無法復原。`)) {
       return
     }
 
     try {
-      const { count: totalCount } = await supabase.from("users").select("*", { count: "exact", head: true })
-
-      if (totalCount !== null) {
-        setStats((prev) => ({
-          ...prev,
-          total: totalCount,
-          active: Math.floor(totalCount * 0.95), // Approximate
-          pending: Math.floor(totalCount * 0.02),
-          suspended: Math.floor(totalCount * 0.03),
-        }))
+      const { error } = await deleteUser(userId)
+      if (error) {
+        toast.error("刪除用戶失敗")
+        return
       }
+      toast.success("用戶已刪除")
+      loadUsers()
     } catch (error) {
-      console.error("Error loading stats:", error)
+      toast.error("刪除用戶失敗")
+      console.error(error)
     }
   }
 
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (user.company && user.company.toLowerCase().includes(searchTerm.toLowerCase()))
-    const matchesStatus = statusFilter === "all" || user.status === statusFilter
-    const matchesYear = yearFilter === "all" || user.graduation_year?.toString() === yearFilter
-
-    return matchesSearch && matchesStatus && matchesYear
-  })
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "active":
-        return <Badge className="bg-green-100 text-green-800">啟用</Badge>
-      case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800">待審核</Badge>
-      case "suspended":
-        return <Badge className="bg-red-100 text-red-800">停用</Badge>
-      default:
-        return <Badge variant="secondary">{status}</Badge>
-    }
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("zh-TW")
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">用戶管理</h1>
+        </div>
+        <div className="grid gap-4">
+          {[1, 2, 3].map(i => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="animate-pulse space-y-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="h-12 w-12 rounded-full bg-gray-200"></div>
+                    <div className="space-y-2">
+                      <div className="h-4 w-32 bg-gray-200 rounded"></div>
+                      <div className="h-3 w-48 bg-gray-200 rounded"></div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">用戶管理</h1>
-          <p className="text-gray-600">管理校友帳戶與權限設定</p>
-          {!isSupabaseConfigured && (
-            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-              🔧 目前為展示模式，顯示模擬資料
-            </div>
-          )}
+          <h1 className="text-3xl font-bold">用戶管理</h1>
+          <p className="text-muted-foreground">
+            管理系統中的所有用戶
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            匯出資料
-          </Button>
-          <Button>
-            <UserPlus className="h-4 w-4 mr-2" />
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => handleOpenDialog()}>
+              <PlusCircle className="mr-2 h-4 w-4" />
             新增用戶
           </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingUser ? "編輯用戶" : "新增用戶"}</DialogTitle>
+              <DialogDescription>
+                {editingUser ? "修改用戶資訊" : "創建新的用戶帳號"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">姓名</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
+                    placeholder="請輸入姓名"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">電子郵件</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    placeholder="請輸入電子郵件"
+                  />
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-600">{stats.total.toLocaleString()}</div>
-            <p className="text-sm text-gray-600">總用戶數</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-blue-600">{stats.active.toLocaleString()}</div>
-            <p className="text-sm text-gray-600">啟用用戶</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-            <p className="text-sm text-gray-600">待審核</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-red-600">{stats.suspended}</div>
-            <p className="text-sm text-gray-600">停用用戶</p>
-          </CardContent>
-        </Card>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">電話</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange("phone", e.target.value)}
+                    placeholder="請輸入電話號碼"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="graduation_year">畢業年份</Label>
+                  <Select
+                    value={formData.graduation_year?.toString()}
+                    onValueChange={(value) => handleInputChange("graduation_year", parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="選擇畢業年份" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({length: 15}, (_, i) => 2024 - i).map(year => (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="company">公司</Label>
+                  <Input
+                    id="company"
+                    value={formData.company}
+                    onChange={(e) => handleInputChange("company", e.target.value)}
+                    placeholder="請輸入公司名稱"
+                  />
+                </div>
+                <div className="space-y-2">
+                                  <Label htmlFor="job_title">職位</Label>
+                <Input
+                  id="job_title"
+                  value={formData.job_title}
+                  onChange={(e) => handleInputChange("job_title", e.target.value)}
+                    placeholder="請輸入職位"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="location">地點</Label>
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => handleInputChange("location", e.target.value)}
+                    placeholder="請輸入地點"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="website">網站</Label>
+                  <Input
+                    id="website"
+                    value={formData.website}
+                    onChange={(e) => handleInputChange("website", e.target.value)}
+                    placeholder="請輸入個人網站"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bio">個人簡介</Label>
+                <Textarea
+                  id="bio"
+                  value={formData.bio}
+                  onChange={(e) => handleInputChange("bio", e.target.value)}
+                  placeholder="請輸入個人簡介"
+                  rows={3}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="skills">專業技能 (用逗號分隔)</Label>
+                <Input
+                  id="skills"
+                  value={skillsInput}
+                  onChange={(e) => setSkillsInput(e.target.value)}
+                  placeholder="例如：管理, 行銷, 財務"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="interests">興趣愛好 (用逗號分隔)</Label>
+                <Input
+                  id="interests"
+                  value={interestsInput}
+                  onChange={(e) => setInterestsInput(e.target.value)}
+                  placeholder="例如：閱讀, 旅行, 運動"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="avatar_url">頭像 URL</Label>
+                <Input
+                  id="avatar_url"
+                  value={formData.avatar_url}
+                  onChange={(e) => handleInputChange("avatar_url", e.target.value)}
+                  placeholder="請輸入頭像圖片 URL"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={handleCloseDialog}>
+                取消
+              </Button>
+              <Button onClick={handleSubmit}>
+                {editingUser ? "更新" : "創建"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>用戶列表</CardTitle>
-          <CardDescription>管理所有校友帳戶</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            用戶列表 ({users.length})
+          </CardTitle>
+          <CardDescription>
+            系統中所有註冊用戶的列表
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="搜尋姓名、電子郵件或公司..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="狀態篩選" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部狀態</SelectItem>
-                <SelectItem value="active">啟用</SelectItem>
-                <SelectItem value="pending">待審核</SelectItem>
-                <SelectItem value="suspended">停用</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={yearFilter} onValueChange={setYearFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="畢業年份" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部年份</SelectItem>
-                <SelectItem value="2024">2024年</SelectItem>
-                <SelectItem value="2023">2023年</SelectItem>
-                <SelectItem value="2022">2022年</SelectItem>
-                <SelectItem value="2021">2021年</SelectItem>
-                <SelectItem value="2020">2020年</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Loading State */}
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">載入用戶資料中...</p>
-            </div>
-          ) : (
-            <>
-              {/* Users Table */}
-              <div className="rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>用戶</TableHead>
-                      <TableHead>公司職位</TableHead>
+                <TableHead>聯絡資訊</TableHead>
+                <TableHead>工作資訊</TableHead>
                       <TableHead>畢業年份</TableHead>
-                      <TableHead>所在地</TableHead>
-                      <TableHead>狀態</TableHead>
-                      <TableHead>註冊日期</TableHead>
-                      <TableHead className="text-right">操作</TableHead>
+                <TableHead>操作</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredUsers.map((user) => (
+              {users.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell>
                           <div className="flex items-center space-x-3">
                             <Avatar>
-                              <AvatarImage src={user.avatar_url || "/placeholder.svg"} />
-                              <AvatarFallback>{user.name[0]}</AvatarFallback>
+                        <AvatarImage src={user.avatar_url} />
+                        <AvatarFallback>
+                          {user.name?.charAt(0) || "U"}
+                        </AvatarFallback>
                             </Avatar>
                             <div>
                               <div className="font-medium">{user.name}</div>
-                              <div className="text-sm text-gray-500">{user.email}</div>
+                        <div className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          {user.email}
+                        </div>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div>
-                            <div className="font-medium">{user.position1 || "未設定"}</div>
-                            <div className="text-sm text-gray-500">{user.company || "未設定"}</div>
+                    <div className="space-y-1">
+                      {user.phone && (
+                        <div className="text-sm">{user.phone}</div>
+                      )}
+                      {user.location && (
+                        <div className="text-sm text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {user.location}
+                        </div>
+                      )}
                           </div>
                         </TableCell>
-                        <TableCell>{user.graduation_year ? `${user.graduation_year}年` : "未設定"}</TableCell>
-                        <TableCell>{user.location || "未設定"}</TableCell>
-                        <TableCell>{getStatusBadge(user.status)}</TableCell>
-                        <TableCell className="text-sm text-gray-500">{formatDate(user.created_at)}</TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <Eye className="h-4 w-4 mr-2" />
-                                查看詳情
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Edit className="h-4 w-4 mr-2" />
-                                編輯資料
-                              </DropdownMenuItem>
-                              {user.status === "pending" && (
-                                <DropdownMenuItem>
-                                  <CheckCircle className="h-4 w-4 mr-2" />
-                                  批准申請
-                                </DropdownMenuItem>
-                              )}
-                              {user.status === "active" && (
-                                <DropdownMenuItem>
-                                  <Ban className="h-4 w-4 mr-2" />
-                                  停用帳戶
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem className="text-red-600">
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                刪除用戶
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                  <TableCell>
+                    <div className="space-y-1">
+                      {user.company && (
+                        <div className="text-sm flex items-center gap-1">
+                          <Building className="h-3 w-3" />
+                          {user.company}
+                        </div>
+                      )}
+                      {user.position && (
+                        <div className="text-sm text-muted-foreground">
+                          {user.position}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">
+                      {user.graduation_year || "未設定"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenDialog(user)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(user.id, user.name)}
+                        className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+          
+          {users.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              暫無用戶資料
               </div>
-
-              {/* Pagination */}
-              <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-gray-500">
-                  顯示 {filteredUsers.length} 筆結果中的 1-{Math.min(10, filteredUsers.length)} 筆
-                </p>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" disabled>
-                    上一頁
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    下一頁
-                  </Button>
-                </div>
-              </div>
-            </>
           )}
         </CardContent>
       </Card>
