@@ -25,7 +25,7 @@ export interface User {
   avatar_url?: string
   phone?: string
   company?: string
-  position1?: string // 更新欄位名稱
+  job_title?: string // 職位欄位
   graduation_year?: number
   location?: string
   website?: string

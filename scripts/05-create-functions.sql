@@ -9,6 +9,16 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+-- 先刪除現有觸發器（如果存在），然後重新建立
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+DROP TRIGGER IF EXISTS update_user_privacy_updated_at ON user_privacy;
+DROP TRIGGER IF EXISTS update_events_updated_at ON events;
+DROP TRIGGER IF EXISTS update_forum_posts_updated_at ON forum_posts;
+DROP TRIGGER IF EXISTS update_forum_replies_updated_at ON forum_replies;
+DROP TRIGGER IF EXISTS update_papers_updated_at ON papers;
+DROP TRIGGER IF EXISTS update_connections_updated_at ON connections;
+DROP TRIGGER IF EXISTS on_auth_user_created ON users;
+
 -- 為需要的表建立觸發器
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_user_privacy_updated_at BEFORE UPDATE ON user_privacy FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -33,8 +43,13 @@ CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON users
     FOR EACH ROW EXECUTE FUNCTION handle_new_user();
 
+-- 先刪除現有函數（如果存在），避免返回類型衝突
+DROP FUNCTION IF EXISTS get_user_stats(UUID);
+DROP FUNCTION IF EXISTS search_alumni(TEXT, TEXT, INTEGER, TEXT[]);
+DROP FUNCTION IF EXISTS get_trending_papers(INTEGER);
+
 -- 取得用戶統計資料的函數
-CREATE OR REPLACE FUNCTION get_user_stats(user_uuid UUID)
+CREATE FUNCTION get_user_stats(user_uuid UUID)
 RETURNS JSON AS $$
 DECLARE
     result JSON;
@@ -53,7 +68,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- 搜尋校友的函數
-CREATE OR REPLACE FUNCTION search_alumni(
+CREATE FUNCTION search_alumni(
     search_term TEXT DEFAULT '',
     location_filter TEXT DEFAULT '',
     graduation_year_filter INTEGER DEFAULT NULL,
@@ -64,7 +79,7 @@ RETURNS TABLE (
     name VARCHAR,
     email VARCHAR,
     company VARCHAR,
-    position VARCHAR,
+    job_title VARCHAR,
     location VARCHAR,
     graduation_year INTEGER,
     skills TEXT[],
@@ -77,7 +92,7 @@ BEGIN
         u.name,
         u.email,
         u.company,
-        u.position,
+        u.job_title,
         u.location,
         u.graduation_year,
         u.skills,
@@ -96,7 +111,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- 取得熱門論文的函數
-CREATE OR REPLACE FUNCTION get_trending_papers(limit_count INTEGER DEFAULT 10)
+CREATE FUNCTION get_trending_papers(limit_count INTEGER DEFAULT 10)
 RETURNS TABLE (
     id UUID,
     title VARCHAR,

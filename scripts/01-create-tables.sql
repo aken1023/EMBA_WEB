@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   avatar_url TEXT,
   phone VARCHAR(20),
   company VARCHAR(200),
-  position1 VARCHAR(100), -- 更新欄位名稱
+  job_title VARCHAR(100), -- 職位欄位
   graduation_year INTEGER,
   location VARCHAR(100),
   website TEXT,

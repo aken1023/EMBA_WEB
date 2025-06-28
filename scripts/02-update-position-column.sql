@@ -1,10 +1,6 @@
--- 修改 users 表格中的 position 欄位名稱為 position1
-ALTER TABLE users RENAME COLUMN position TO position1;
+-- 用戶表已使用正確的 position 欄位名稱
 
--- 更新相關的查詢函數（如果有的話）
--- 這裡我們需要重新建立任何使用 position 欄位的函數
-
--- 建立搜尋校友的函數（更新版本）
+-- 建立搜尋校友的函數
 CREATE OR REPLACE FUNCTION search_alumni(
   search_term TEXT DEFAULT '',
   location_filter TEXT DEFAULT '',
@@ -15,7 +11,7 @@ RETURNS TABLE (
   name VARCHAR,
   email VARCHAR,
   company VARCHAR,
-  position1 VARCHAR,
+  job_title VARCHAR,
   location VARCHAR,
   graduation_year INTEGER,
   skills TEXT[],
@@ -28,7 +24,7 @@ BEGIN
     u.name,
     u.email,
     u.company,
-    u.position1,
+    u.job_title,
     u.location,
     u.graduation_year,
     u.skills,
@@ -38,7 +34,7 @@ BEGIN
     (search_term = '' OR 
      u.name ILIKE '%' || search_term || '%' OR
      u.company ILIKE '%' || search_term || '%' OR
-     u.position1 ILIKE '%' || search_term || '%')
+     u.job_title ILIKE '%' || search_term || '%')
     AND (location_filter = '' OR u.location ILIKE '%' || location_filter || '%')
     AND (graduation_year_filter IS NULL OR u.graduation_year = graduation_year_filter)
   ORDER BY u.name;

@@ -1,346 +1,492 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import {
-  Search,
-  Filter,
-  MoreHorizontal,
-  Plus,
-  Download,
-  Eye,
-  Edit,
-  Trash2,
-  CheckCircle,
-  XCircle,
-  Calendar,
-  Users,
-  MapPin,
-} from "lucide-react"
+import { PlusCircle, Edit, Trash2, Calendar, MapPin, Users, DollarSign, Clock } from "lucide-react"
+import { getEvents, createEvent, updateEvent, deleteEvent } from "@/lib/database"
+import { toast } from "sonner"
 
-const events = [
-  {
-    id: "1",
-    title: "2024年度校友聚會",
-    date: "2024-12-15",
-    time: "18:00-22:00",
-    location: "台北君悅酒店",
-    category: "聚會",
-    status: "published",
-    attendees: 156,
-    maxAttendees: 200,
-    price: 1500,
-    createdBy: "管理員",
-    createdAt: "2024-10-01",
-  },
-  {
-    id: "2",
-    title: "AI時代的商業轉型論壇",
-    date: "2024-11-28",
-    time: "14:00-17:00",
-    location: "台大管理學院",
-    category: "講座",
-    status: "published",
-    attendees: 89,
-    maxAttendees: 120,
-    price: 800,
-    createdBy: "張志明",
-    createdAt: "2024-10-15",
-  },
-  {
-    id: "3",
-    title: "高爾夫球友誼賽",
-    date: "2024-11-20",
-    time: "08:00-16:00",
-    location: "台北高爾夫俱樂部",
-    category: "運動",
-    status: "draft",
-    attendees: 32,
-    maxAttendees: 40,
-    price: 2500,
-    createdBy: "李美華",
-    createdAt: "2024-11-01",
-  },
-  {
-    id: "4",
-    title: "創業經驗分享會",
-    date: "2024-11-10",
-    time: "19:00-21:00",
-    location: "信義區創業基地",
-    category: "講座",
-    status: "ended",
-    attendees: 67,
-    maxAttendees: 80,
-    price: 0,
-    createdBy: "王大明",
-    createdAt: "2024-10-20",
-  },
+interface Event {
+  id: string
+  title: string
+  description: string
+  date: string
+  time: string
+  location: string
+  max_attendees: number
+  price: number
+  category: string
+  status: string
+  image_url?: string
+  created_by: string
+  created_at: string
+  updated_at: string
+  event_registrations?: { count: number }[]
+}
+
+const initialEventData = {
+  title: "",
+  description: "",
+  date: "",
+  time: "",
+  location: "",
+  max_attendees: 100,
+  price: 0,
+  category: "聚會",
+  status: "報名中",
+  image_url: "",
+  created_by: "11111111-1111-1111-1111-111111111111" // 假設使用管理員ID
+}
+
+const eventCategories = [
+  { value: "聚會", label: "聚會" },
+  { value: "論壇", label: "論壇" },
+  { value: "講座", label: "講座" },
+  { value: "運動", label: "運動" },
+  { value: "旅遊", label: "旅遊" },
+  { value: "培訓", label: "培訓" },
+  { value: "其他", label: "其他" }
 ]
 
-export default function EventsManagement() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [categoryFilter, setCategoryFilter] = useState("all")
+const eventStatuses = [
+  { value: "報名中", label: "報名中" },
+  { value: "已額滿", label: "已額滿" },
+  { value: "已結束", label: "已結束" },
+  { value: "已取消", label: "已取消" }
+]
 
-  const filteredEvents = events.filter((event) => {
-    const matchesSearch =
-      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.location.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || event.status === statusFilter
-    const matchesCategory = categoryFilter === "all" || event.category === categoryFilter
+export default function AdminEventsPage() {
+  const [events, setEvents] = useState<Event[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null)
+  const [formData, setFormData] = useState<any>(initialEventData)
 
-    return matchesSearch && matchesStatus && matchesCategory
-  })
+  useEffect(() => {
+    loadEvents()
+  }, [])
+
+  const loadEvents = async () => {
+    setIsLoading(true)
+    try {
+      const { data, error } = await getEvents()
+      if (error) {
+        toast.error("載入活動資料失敗")
+        console.error(error)
+      } else {
+        setEvents(data || [])
+      }
+    } catch (error) {
+      toast.error("載入活動資料失敗")
+      console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleOpenDialog = (event?: Event) => {
+    if (event) {
+      setEditingEvent(event)
+      setFormData({
+        ...event,
+        max_attendees: event.max_attendees || 100,
+        price: event.price || 0
+      })
+    } else {
+      setEditingEvent(null)
+      setFormData(initialEventData)
+    }
+    setIsDialogOpen(true)
+  }
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false)
+    setEditingEvent(null)
+    setFormData(initialEventData)
+  }
+
+  const handleInputChange = (field: string, value: any) => {
+    setFormData((prev: typeof initialEventData) => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const handleSubmit = async () => {
+    try {
+      const eventData = {
+        ...formData,
+        max_attendees: parseInt(formData.max_attendees) || 100,
+        price: parseFloat(formData.price) || 0
+      }
+
+      if (editingEvent) {
+        const { error } = await updateEvent(editingEvent.id, eventData)
+        if (error) {
+          toast.error("更新活動失敗")
+          return
+        }
+        toast.success("活動更新成功")
+      } else {
+        const { error } = await createEvent(eventData)
+        if (error) {
+          toast.error("創建活動失敗")
+          return
+        }
+        toast.success("活動創建成功")
+      }
+
+      handleCloseDialog()
+      loadEvents()
+    } catch (error) {
+      toast.error(editingEvent ? "更新活動失敗" : "創建活動失敗")
+      console.error(error)
+    }
+  }
+
+  const handleDelete = async (eventId: string, eventTitle: string) => {
+    if (!confirm(`確定要刪除活動 "${eventTitle}" 嗎？此操作無法復原。`)) {
+      return
+    }
+
+    try {
+      const { error } = await deleteEvent(eventId)
+      if (error) {
+        toast.error("刪除活動失敗")
+        return
+      }
+      toast.success("活動已刪除")
+      loadEvents()
+    } catch (error) {
+      toast.error("刪除活動失敗")
+      console.error(error)
+    }
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "published":
-        return <Badge className="bg-green-100 text-green-800">已發布</Badge>
-      case "draft":
-        return <Badge className="bg-yellow-100 text-yellow-800">草稿</Badge>
-      case "ended":
-        return <Badge className="bg-gray-100 text-gray-800">已結束</Badge>
-      case "cancelled":
-        return <Badge className="bg-red-100 text-red-800">已取消</Badge>
+      case "報名中":
+        return <Badge className="bg-green-100 text-green-800">{status}</Badge>
+      case "已額滿":
+        return <Badge className="bg-orange-100 text-orange-800">{status}</Badge>
+      case "已結束":
+        return <Badge className="bg-gray-100 text-gray-800">{status}</Badge>
+      case "已取消":
+        return <Badge className="bg-red-100 text-red-800">{status}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
   }
 
-  const getCategoryBadge = (category: string) => {
-    const colors = {
-      聚會: "bg-blue-100 text-blue-800",
-      講座: "bg-purple-100 text-purple-800",
-      運動: "bg-green-100 text-green-800",
-      旅遊: "bg-orange-100 text-orange-800",
-    }
-    return <Badge className={colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"}>{category}</Badge>
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("zh-TW")
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">活動管理</h1>
+        </div>
+        <div className="grid gap-4">
+          {[1, 2, 3].map(i => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="animate-pulse space-y-4">
+                  <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
+                  <div className="h-3 w-1/2 bg-gray-200 rounded"></div>
+                  <div className="h-3 w-1/4 bg-gray-200 rounded"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">活動管理</h1>
-          <p className="text-gray-600">管理校友活動與報名狀況</p>
+          <h1 className="text-3xl font-bold">活動管理</h1>
+          <p className="text-muted-foreground">
+            管理系統中的所有活動
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            匯出報告
-          </Button>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            新增活動
-          </Button>
-        </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => handleOpenDialog()}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              新增活動
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingEvent ? "編輯活動" : "新增活動"}</DialogTitle>
+              <DialogDescription>
+                {editingEvent ? "修改活動資訊" : "創建新的活動"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">活動標題</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => handleInputChange("title", e.target.value)}
+                  placeholder="請輸入活動標題"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">活動描述</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => handleInputChange("description", e.target.value)}
+                  placeholder="請輸入活動描述"
+                  rows={4}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="date">活動日期</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => handleInputChange("date", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="time">活動時間</Label>
+                  <Input
+                    id="time"
+                    value={formData.time}
+                    onChange={(e) => handleInputChange("time", e.target.value)}
+                    placeholder="例如：14:00-17:00"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location">活動地點</Label>
+                <Input
+                  id="location"
+                  value={formData.location}
+                  onChange={(e) => handleInputChange("location", e.target.value)}
+                  placeholder="請輸入活動地點"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="max_attendees">最大參與人數</Label>
+                  <Input
+                    id="max_attendees"
+                    type="number"
+                    value={formData.max_attendees}
+                    onChange={(e) => handleInputChange("max_attendees", e.target.value)}
+                    placeholder="100"
+                    min="1"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="price">活動費用 (NT$)</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    value={formData.price}
+                    onChange={(e) => handleInputChange("price", e.target.value)}
+                    placeholder="0"
+                    min="0"
+                    step="1"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="category">活動類別</Label>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value) => handleInputChange("category", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="選擇活動類別" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {eventCategories.map(cat => (
+                        <SelectItem key={cat.value} value={cat.value}>
+                          {cat.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="status">活動狀態</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value) => handleInputChange("status", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="選擇活動狀態" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {eventStatuses.map(status => (
+                        <SelectItem key={status.value} value={status.value}>
+                          {status.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="image_url">活動圖片 URL</Label>
+                <Input
+                  id="image_url"
+                  value={formData.image_url}
+                  onChange={(e) => handleInputChange("image_url", e.target.value)}
+                  placeholder="請輸入活動圖片 URL"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={handleCloseDialog}>
+                取消
+              </Button>
+              <Button onClick={handleSubmit}>
+                {editingEvent ? "更新" : "創建"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-blue-600">156</div>
-                <p className="text-sm text-gray-600">總活動數</p>
-              </div>
-              <Calendar className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-green-600">89</div>
-                <p className="text-sm text-gray-600">進行中</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-yellow-600">12</div>
-                <p className="text-sm text-gray-600">待審核</p>
-              </div>
-              <Eye className="h-8 w-8 text-yellow-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-purple-600">3,247</div>
-                <p className="text-sm text-gray-600">總報名數</p>
-              </div>
-              <Users className="h-8 w-8 text-purple-600" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Events Table */}
       <Card>
         <CardHeader>
-          <CardTitle>活動列表</CardTitle>
-          <CardDescription>管理所有校友活動</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            活動列表 ({events.length})
+          </CardTitle>
+          <CardDescription>
+            系統中所有活動的列表
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="搜尋活動名稱或地點..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="狀態篩選" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部狀態</SelectItem>
-                <SelectItem value="published">已發布</SelectItem>
-                <SelectItem value="draft">草稿</SelectItem>
-                <SelectItem value="ended">已結束</SelectItem>
-                <SelectItem value="cancelled">已取消</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="類型篩選" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部類型</SelectItem>
-                <SelectItem value="聚會">聚會</SelectItem>
-                <SelectItem value="講座">講座</SelectItem>
-                <SelectItem value="運動">運動</SelectItem>
-                <SelectItem value="旅遊">旅遊</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>活動資訊</TableHead>
-                  <TableHead>日期時間</TableHead>
-                  <TableHead>地點</TableHead>
-                  <TableHead>類型</TableHead>
-                  <TableHead>報名狀況</TableHead>
-                  <TableHead>狀態</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>活動資訊</TableHead>
+                <TableHead>時間地點</TableHead>
+                <TableHead>參與狀況</TableHead>
+                <TableHead>費用</TableHead>
+                <TableHead>狀態</TableHead>
+                <TableHead>操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {events.map((event) => (
+                <TableRow key={event.id}>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <div className="font-medium">{event.title}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {event.description.length > 60 
+                          ? `${event.description.substring(0, 60)}...` 
+                          : event.description}
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        {event.category}
+                      </Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <div className="text-sm flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {formatDate(event.date)}
+                      </div>
+                      <div className="text-sm flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {event.time}
+                      </div>
+                      <div className="text-sm text-muted-foreground flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {event.location}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <div className="text-sm flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {event.event_registrations?.[0]?.count || 0} / {event.max_attendees}
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full" 
+                          style={{
+                            width: `${Math.min(
+                              ((event.event_registrations?.[0]?.count || 0) / event.max_attendees) * 100, 
+                              100
+                            )}%`
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <DollarSign className="h-3 w-3" />
+                      {event.price === 0 ? "免費" : `NT$ ${event.price.toLocaleString()}`}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {getStatusBadge(event.status)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenDialog(event)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(event.id, event.title)}
+                        className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredEvents.map((event) => (
-                  <TableRow key={event.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{event.title}</div>
-                        <div className="text-sm text-gray-500">
-                          建立者: {event.createdBy} • {event.createdAt}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{event.date}</div>
-                        <div className="text-sm text-gray-500">{event.time}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <MapPin className="h-3 w-3 mr-1 text-gray-400" />
-                        <span className="text-sm">{event.location}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getCategoryBadge(event.category)}</TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">
-                          {event.attendees}/{event.maxAttendees}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {Math.round((event.attendees / event.maxAttendees) * 100)}% 滿額
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(event.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Eye className="h-4 w-4 mr-2" />
-                            查看詳情
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="h-4 w-4 mr-2" />
-                            編輯活動
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Users className="h-4 w-4 mr-2" />
-                            報名名單
-                          </DropdownMenuItem>
-                          {event.status === "draft" && (
-                            <DropdownMenuItem>
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              發布活動
-                            </DropdownMenuItem>
-                          )}
-                          {event.status === "published" && (
-                            <DropdownMenuItem>
-                              <XCircle className="h-4 w-4 mr-2" />
-                              取消活動
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem className="text-red-600">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            刪除活動
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-gray-500">
-              顯示 {filteredEvents.length} 筆結果中的 1-{Math.min(10, filteredEvents.length)} 筆
-            </p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled>
-                上一頁
-              </Button>
-              <Button variant="outline" size="sm">
-                下一頁
-              </Button>
+              ))}
+            </TableBody>
+          </Table>
+          
+          {events.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              暫無活動資料
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>

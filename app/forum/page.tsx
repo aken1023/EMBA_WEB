@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -8,94 +8,97 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MessageSquare, Eye, Search, Plus, TrendingUp, Clock, Heart, Coffee, BookOpen, Sparkles } from "lucide-react"
+import { getForumPosts, getForumCategories } from "@/lib/database"
 
-const forumPosts = [
-  {
-    id: 1,
-    title: "☕ 分享我的咖啡店創業小故事",
-    content: "從一個小小的夢想開始，到現在擁有自己的溫馨咖啡店，想和大家分享這段充滿挑戰但也很溫暖的旅程...",
-    author: "小雨",
-    authorAvatar: "/business-executive.png",
-    category: "創業分享",
-    replies: 23,
-    likes: 45,
-    views: 234,
-    createdAt: "2小時前",
-    isHot: true,
-    tags: ["咖啡", "創業", "夢想"],
-    mood: "溫暖",
-    color: "from-amber-100 to-orange-100",
-  },
-  {
-    id: 2,
-    title: "🌱 永續生活的小小實踐",
-    content: "最近開始嘗試零廢棄生活，發現其實有很多簡單的方法可以讓生活更環保，想和大家一起分享...",
-    author: "綠茶",
-    authorAvatar: "/startup-founder.png",
-    category: "生活分享",
-    replies: 12,
-    likes: 28,
-    views: 156,
-    createdAt: "5小時前",
-    isHot: false,
-    tags: ["環保", "永續", "生活"],
-    mood: "清新",
-    color: "from-green-100 to-emerald-100",
-  },
-  {
-    id: 3,
-    title: "📚 推薦幾本改變我人生的書",
-    content: "閱讀真的可以改變一個人的視野，這些書陪伴我度過了很多困難的時光，也給了我很多啟發...",
-    author: "書蟲",
-    authorAvatar: "/placeholder-fqpq1.png",
-    category: "閱讀分享",
-    replies: 18,
-    likes: 32,
-    views: 189,
-    createdAt: "1天前",
-    isHot: true,
-    tags: ["閱讀", "成長", "推薦"],
-    mood: "知性",
-    color: "from-blue-100 to-indigo-100",
-  },
-  {
-    id: 4,
-    title: "🎨 手作療癒的美好時光",
-    content: "最近愛上了手作，發現在專注創作的時候，心情會變得特別平靜，想分享一些簡單的手作小物...",
-    author: "手作女孩",
-    authorAvatar: "/placeholder.svg?height=40&width=40",
-    category: "手作分享",
-    replies: 31,
-    likes: 67,
-    views: 412,
-    createdAt: "2天前",
-    isHot: true,
-    tags: ["手作", "療癒", "創作"],
-    mood: "療癒",
-    color: "from-pink-100 to-rose-100",
-  },
-]
+interface ForumPost {
+  id: string
+  title: string
+  content: string
+  category_id: string
+  author_id: string
+  tags: string[]
+  is_hot: boolean
+  views: number
+  likes: number
+  created_at: string
+  updated_at: string
+  users?: { name: string; avatar_url?: string }
+  forum_categories?: { name: string; color?: string }
+  forum_replies?: { count: number }[]
+}
 
-const categories = [
-  { name: "創業分享", count: 45, color: "bg-orange-100 text-orange-700", icon: "☕" },
-  { name: "生活分享", count: 32, color: "bg-green-100 text-green-700", icon: "🌱" },
-  { name: "閱讀分享", count: 28, color: "bg-blue-100 text-blue-700", icon: "📚" },
-  { name: "手作分享", count: 23, color: "bg-pink-100 text-pink-700", icon: "🎨" },
-  { name: "旅行故事", count: 19, color: "bg-purple-100 text-purple-700", icon: "✈️" },
-  { name: "美食探索", count: 35, color: "bg-yellow-100 text-yellow-700", icon: "🍰" },
-]
+interface ForumCategory {
+  id: string
+  name: string
+  description: string
+  color: string
+}
 
 export default function ForumPage() {
+  const [posts, setPosts] = useState<ForumPost[]>([])
+  const [categories, setCategories] = useState<ForumCategory[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
 
-  const filteredPosts = forumPosts.filter((post) => {
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      const [postsResult, categoriesResult] = await Promise.all([
+        getForumPosts(),
+        getForumCategories()
+      ])
+
+      if (postsResult.error) {
+        console.error("Error loading forum posts:", postsResult.error)
+      } else {
+        setPosts(postsResult.data || [])
+      }
+
+      if (categoriesResult.error) {
+        console.error("Error loading forum categories:", categoriesResult.error)
+      } else {
+        setCategories(categoriesResult.data || [])
+      }
+    } catch (error) {
+      console.error("Error loading forum data:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filteredPosts = posts.filter((post) => {
     const matchesSearch =
       post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       post.content.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = categoryFilter === "all" || post.category === categoryFilter
+    const matchesCategory = categoryFilter === "all" || post.category_id === categoryFilter
     return matchesSearch && matchesCategory
   })
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
+    
+    if (diffInHours < 1) return "剛剛"
+    if (diffInHours < 24) return `${diffInHours}小時前`
+    if (diffInHours < 48) return "1天前"
+    return `${Math.floor(diffInHours / 24)}天前`
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">載入論壇資料中...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
@@ -123,7 +126,7 @@ export default function ForumPage() {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-8">
+        <div className="grid lg:grid-cols-4 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-3 space-y-6">
             {/* Search and Actions with cute design */}
@@ -144,8 +147,8 @@ export default function ForumPage() {
                 <SelectContent className="bg-white/95 backdrop-blur-sm border-purple-200/50 rounded-2xl">
                   <SelectItem value="all">所有話題</SelectItem>
                   {categories.map((category) => (
-                    <SelectItem key={category.name} value={category.name}>
-                      {category.icon} {category.name}
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -161,22 +164,22 @@ export default function ForumPage() {
               {filteredPosts.map((post, index) => (
                 <Card
                   key={post.id}
-                  className={`hover:shadow-xl transition-all duration-500 bg-gradient-to-br ${post.color} border-0 hover:scale-[1.02] animate-in fade-in-50 slide-in-from-left-4 rounded-3xl overflow-hidden`}
+                  className={`hover:shadow-xl transition-all duration-500 bg-gradient-to-br from-white to-purple-50/50 border-0 hover:scale-[1.02] animate-in fade-in-50 slide-in-from-left-4 rounded-3xl overflow-hidden`}
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
                   <CardHeader className="bg-white/60 backdrop-blur-sm">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center space-x-3">
                         <Avatar className="ring-2 ring-white/50">
-                          <AvatarImage src={post.authorAvatar || "/placeholder.svg"} />
+                          <AvatarImage src={post.users?.avatar_url || "/placeholder.svg"} />
                           <AvatarFallback className="bg-gradient-to-br from-purple-200 to-pink-200 text-purple-700">
-                            {post.author[0]}
+                            {post.users?.name?.[0] || "U"}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <div className="flex items-center space-x-2">
-                            <span className="font-medium text-gray-700">{post.author}</span>
-                            {post.isHot && (
+                            <span className="font-medium text-gray-700">{post.users?.name || "匿名用戶"}</span>
+                            {post.is_hot && (
                               <Badge className="bg-gradient-to-r from-red-400 to-pink-400 text-white text-xs rounded-full px-2 py-1">
                                 <TrendingUp className="h-3 w-3 mr-1" />
                                 熱門
@@ -185,22 +188,16 @@ export default function ForumPage() {
                           </div>
                           <div className="flex items-center text-sm text-gray-500">
                             <Clock className="h-3 w-3 mr-1" />
-                            {post.createdAt}
+                            {formatTimeAgo(post.created_at)}
                           </div>
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Badge
-                          className={`${categories.find((c) => c.name === post.category)?.color} rounded-full px-3 py-1`}
-                        >
-                          {categories.find((c) => c.name === post.category)?.icon} {post.category}
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className="border-purple-300 text-purple-700 bg-purple-50/80 rounded-full px-3 py-1"
-                        >
-                          {post.mood}
-                        </Badge>
+                        {post.forum_categories && (
+                          <Badge className={post.forum_categories.color || "bg-purple-100 text-purple-800"}>
+                            {post.forum_categories.name}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </CardHeader>
@@ -212,23 +209,25 @@ export default function ForumPage() {
                       {post.content}
                     </CardDescription>
 
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {post.tags.map((tag) => (
-                        <Badge
-                          key={tag}
-                          variant="outline"
-                          className="text-xs border-purple-300 text-purple-700 bg-purple-50/60 rounded-full px-3 py-1 hover:bg-purple-100/80 transition-colors"
-                        >
-                          #{tag}
-                        </Badge>
-                      ))}
-                    </div>
+                    {post.tags && post.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {post.tags.map((tag, tagIndex) => (
+                          <Badge
+                            key={tagIndex}
+                            variant="outline"
+                            className="text-xs border-purple-300 text-purple-700 bg-purple-50/60 rounded-full px-3 py-1 hover:bg-purple-100/80 transition-colors"
+                          >
+                            #{tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
 
-                    <div className="flex items-center justify-between text-sm text-gray-600">
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <div className="flex items-center group cursor-pointer">
                           <MessageSquare className="h-4 w-4 mr-1 group-hover:text-purple-500 transition-colors" />
-                          {post.replies} 回覆
+                          {Array.isArray(post.forum_replies) ? post.forum_replies.length : 0} 回覆
                         </div>
                         <div className="flex items-center group cursor-pointer">
                           <Heart className="h-4 w-4 mr-1 group-hover:text-red-500 transition-colors" />
@@ -251,6 +250,14 @@ export default function ForumPage() {
                 </Card>
               ))}
             </div>
+
+            {filteredPosts.length === 0 && (
+              <div className="text-center py-12">
+                <MessageSquare className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-xl font-semibold text-gray-600 mb-2">找不到符合條件的討論</h3>
+                <p className="text-gray-500">請嘗試調整搜尋條件或瀏覽其他話題</p>
+              </div>
+            )}
           </div>
 
           {/* Sidebar with cute design */}
@@ -266,17 +273,17 @@ export default function ForumPage() {
               <CardContent className="space-y-3 p-4">
                 {categories.map((category) => (
                   <div
-                    key={category.name}
+                    key={category.id}
                     className="flex items-center justify-between p-3 rounded-2xl hover:bg-white/60 cursor-pointer transition-all duration-300 group"
+                    onClick={() => setCategoryFilter(category.id)}
                   >
                     <div className="flex items-center">
-                      <span className="text-lg mr-2">{category.icon}</span>
                       <span className="text-sm font-medium text-gray-700 group-hover:text-purple-600 transition-colors">
                         {category.name}
                       </span>
                     </div>
                     <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700 rounded-full">
-                      {category.count}
+                      {posts.filter(p => p.category_id === category.id).length}
                     </Badge>
                   </div>
                 ))}
@@ -293,7 +300,7 @@ export default function ForumPage() {
               </CardHeader>
               <CardContent className="space-y-4 p-4">
                 {filteredPosts
-                  .filter((post) => post.isHot)
+                  .filter((post) => post.is_hot)
                   .slice(0, 3)
                   .map((post) => (
                     <div key={post.id} className="border-l-3 border-pink-400 pl-4 py-2 bg-white/40 rounded-r-2xl">
@@ -302,7 +309,7 @@ export default function ForumPage() {
                       </h4>
                       <div className="text-xs text-gray-500 mt-2 flex items-center">
                         <Heart className="h-3 w-3 mr-1 text-pink-400" />
-                        {post.replies} 回覆 • {post.views} 瀏覽
+                        {Array.isArray(post.forum_replies) ? post.forum_replies.length : 0} 回覆 • {post.views} 瀏覽
                       </div>
                     </div>
                   ))}

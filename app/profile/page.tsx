@@ -26,7 +26,7 @@ export default function ProfilePage() {
     email: "zhang.zhiming@example.com",
     phone: "+886-912-345-678",
     company: "創新科技股份有限公司",
-    position1: "執行長", // 更新為 position1
+          job_title: "執行長", // 職位欄位
     graduation_year: 2018,
     location: "台北市",
     website: "https://www.innovatech.com",
@@ -73,7 +73,7 @@ export default function ProfilePage() {
           email: profile.email || "",
           phone: profile.phone || "",
           company: profile.company || "",
-          position1: profile.position1 || "", // 使用 position1
+                      job_title: profile.job_title || "", // 使用 job_title
           graduation_year: profile.graduation_year || new Date().getFullYear(),
           location: profile.location || "",
           website: profile.website || "",
@@ -115,7 +115,7 @@ export default function ProfilePage() {
         name: profileData.name,
         phone: profileData.phone,
         company: profileData.company,
-        position1: profileData.position1, // 使用 position1
+        job_title: profileData.job_title, // 使用 job_title
         graduation_year: profileData.graduation_year,
         location: profileData.location,
         website: profileData.website,
@@ -391,11 +391,11 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="position1">職位</Label>
-                    <Input
-                      id="position1"
-                      value={profileData.position1}
-                      onChange={(e) => handleInputChange("position1", e.target.value)}
+                                    <Label htmlFor="job_title">職位</Label>
+                <Input
+                  id="job_title"
+                  value={profileData.job_title}
+                  onChange={(e) => handleInputChange("job_title", e.target.value)}
                       disabled={!isEditing}
                     />
                   </div>
