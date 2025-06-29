@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { toast } from "@/hooks/use-toast"
+import { getAllAlumni, createAlumni, updateAlumni, deleteAlumni } from "@/lib/database"
 import { 
   Search, 
   Filter,
@@ -31,8 +34,36 @@ import {
   Network,
   Globe,
   GraduationCap,
-  Sparkles
+  Sparkles,
+  Plus,
+  Edit,
+  Trash2,
+  Save,
+  X
 } from "lucide-react"
+
+// 校友資料類型定義
+interface Alumni {
+  id: string
+  name: string
+  title: string
+  company: string
+  location: string
+  graduationYear: number
+  batch: string
+  email: string
+  phone: string
+  avatar: string
+  bio: string
+  specialties: string[]
+  experience: string
+  achievements: string[]
+  interests: string[]
+  languages: string[]
+  connections: number
+  isOnline: boolean
+  status: string
+}
 
 // 模擬校友資料
 const alumniData = [
@@ -169,23 +200,108 @@ export default function NetworkPage() {
   const [locationFilter, setLocationFilter] = useState("all")
   const [graduationYearFilter, setGraduationYearFilter] = useState("all")
   const [specialtyFilter, setSpecialtyFilter] = useState("all")
-  const [selectedAlumni, setSelectedAlumni] = useState(null)
+  const [selectedAlumni, setSelectedAlumni] = useState<Alumni | null>(null)
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false)
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false)
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [messageContent, setMessageContent] = useState("")
-  const [filteredAlumni, setFilteredAlumni] = useState(alumniData)
+  const [alumniData, setAlumniData] = useState<Alumni[]>([])
+  const [filteredAlumni, setFilteredAlumni] = useState<Alumni[]>([])
   const [viewMode, setViewMode] = useState("grid") // grid or list
+  const [isLoading, setIsLoading] = useState(true)
+  const [editingAlumni, setEditingAlumni] = useState<Alumni | null>(null)
+  
+  // 新增/編輯表單資料
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    job_title: "",
+    company: "",
+    location: "",
+    graduation_year: "",
+    phone: "",
+    bio: "",
+    skills: [] as string[],
+    interests: [] as string[],
+    avatar_url: ""
+  })
+
+  // 載入校友資料
+  useEffect(() => {
+    loadAlumniData()
+  }, [])
+
+  const loadAlumniData = async () => {
+    setIsLoading(true)
+    try {
+      const { data, error } = await getAllAlumni()
+      if (error) {
+        console.error("載入校友資料錯誤:", error)
+        // 如果資料庫失敗，使用模擬資料  
+        setAlumniData(alumniData)
+        toast({
+          title: "使用模擬資料",
+          description: "無法連接資料庫，已載入模擬資料"
+        })
+      } else if (!data || data.length === 0) {
+        // 如果資料庫返回空數據，使用模擬資料
+        setAlumniData(alumniData)
+        toast({
+          title: "使用模擬資料", 
+          description: "資料庫中無校友資料，已載入模擬資料"
+        })
+      } else {
+        // 轉換資料格式以符合現有介面
+        const formattedData = data.map((user: any) => ({
+          id: user.id,
+          name: user.name || "",
+          title: user.job_title || "",
+          company: user.company || "",
+          location: user.location || "",
+          graduationYear: user.graduation_year || 2024,
+          batch: `第${user.graduation_year ? user.graduation_year - 2009 : 15}屆`,
+          email: user.email || "",
+          phone: user.phone || "",
+          avatar: user.avatar_url || "/placeholder-user.jpg",
+          bio: user.bio || "",
+          specialties: user.skills || [],
+          experience: "5年",
+          achievements: ["優秀校友"],
+          interests: user.interests || [],
+          languages: ["中文", "英文"],
+          connections: Math.floor(Math.random() * 200) + 50,
+          isOnline: Math.random() > 0.5,
+          status: "active"
+        }))
+        setAlumniData(formattedData)
+        toast({
+          title: "載入成功",
+          description: `成功載入 ${formattedData.length} 位校友資料`
+        })
+      }
+    } catch (error) {
+      console.error("載入校友資料異常:", error)
+      // 異常時使用模擬資料
+      setAlumniData(alumniData)
+      toast({
+        title: "使用模擬資料",
+        description: "載入過程發生錯誤，已載入模擬資料"
+      })
+    }
+    setIsLoading(false)
+  }
 
   useEffect(() => {
     let filtered = alumniData
 
     // 搜尋過濾
     if (searchTerm) {
-      filtered = filtered.filter(alumni =>
+      filtered = filtered.filter((alumni: Alumni) =>
         alumni.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         alumni.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
         alumni.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        alumni.specialties.some(specialty => 
+        alumni.specialties.some((specialty: string) => 
           specialty.toLowerCase().includes(searchTerm.toLowerCase())
         )
       )
@@ -193,7 +309,7 @@ export default function NetworkPage() {
 
     // 地點過濾
     if (locationFilter !== "all") {
-      filtered = filtered.filter(alumni => alumni.location === locationFilter)
+      filtered = filtered.filter((alumni: Alumni) => alumni.location === locationFilter)
     }
 
     // 畢業年份過濾
@@ -213,15 +329,114 @@ export default function NetworkPage() {
     setFilteredAlumni(filtered)
   }, [searchTerm, locationFilter, graduationYearFilter, specialtyFilter])
 
-  const openProfile = (alumni) => {
+  const openProfile = (alumni: Alumni) => {
     setSelectedAlumni(alumni)
     setIsProfileDialogOpen(true)
   }
 
-  const openMessage = (alumni) => {
+  const openMessage = (alumni: Alumni) => {
     setSelectedAlumni(alumni)
     setIsMessageDialogOpen(true)
     setMessageContent("")
+  }
+
+  // CRUD 功能函數
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      email: "",
+      job_title: "",
+      company: "",
+      location: "",
+      graduation_year: "",
+      phone: "",
+      bio: "",
+      skills: [],
+      interests: [],
+      avatar_url: ""
+    })
+  }
+
+  const openAddDialog = () => {
+    resetForm()
+    setIsAddDialogOpen(true)
+  }
+
+  const openEditDialog = (alumni: Alumni) => {
+    setEditingAlumni(alumni)
+    setFormData({
+      name: alumni.name,
+      email: alumni.email,
+      job_title: alumni.title,
+      company: alumni.company,
+      location: alumni.location,
+      graduation_year: alumni.graduationYear.toString(),
+      phone: alumni.phone,
+      bio: alumni.bio,
+      skills: alumni.specialties,
+      interests: alumni.interests,
+      avatar_url: alumni.avatar
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const handleSave = async () => {
+    try {
+      const alumniData = {
+        ...formData,
+        graduation_year: parseInt(formData.graduation_year) || new Date().getFullYear()
+      }
+
+      if (editingAlumni) {
+        // 更新
+        const { error } = await updateAlumni(editingAlumni.id, alumniData)
+        if (error) throw error
+        toast({
+          title: "更新成功",
+          description: "校友資料已更新"
+        })
+        setIsEditDialogOpen(false)
+      } else {
+        // 新增
+        const { error } = await createAlumni(alumniData)
+        if (error) throw error
+        toast({
+          title: "新增成功", 
+          description: "校友資料已新增"
+        })
+        setIsAddDialogOpen(false)
+      }
+      
+      await loadAlumniData()
+      setEditingAlumni(null)
+    } catch (error) {
+      toast({
+        title: "操作失敗",
+        description: (error as Error).message || "操作失敗",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("確定要刪除這位校友嗎？")) return
+    
+    try {
+      const { error } = await deleteAlumni(id)
+      if (error) throw error
+      
+      toast({
+        title: "刪除成功",
+        description: "校友資料已刪除"
+      })
+      await loadAlumniData()
+    } catch (error) {
+      toast({
+        title: "刪除失敗",
+        description: (error as Error).message || "刪除失敗",
+        variant: "destructive"
+      })
+    }
   }
 
   const sendMessage = () => {
@@ -245,18 +460,34 @@ export default function NetworkPage() {
         {/* Header */}
         <div className="py-20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <div className="relative inline-block mb-8">
-                <h1 className="text-6xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent leading-tight">
-                  🌐 校友網絡
-                </h1>
-                <div className="absolute -inset-4 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-2xl blur opacity-20"></div>
+            <div className="mb-16">
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex-1"></div>
+                <div className="text-center">
+                  <div className="relative inline-block">
+                    <h1 className="text-6xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent leading-tight">
+                      🌐 校友網絡
+                    </h1>
+                    <div className="absolute -inset-4 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-2xl blur opacity-20"></div>
+                  </div>
+                </div>
+                <div className="flex-1 flex justify-end">
+                  <Button 
+                    onClick={openAddDialog}
+                    className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-3 rounded-2xl text-lg font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                  >
+                    <Plus className="h-5 w-5 mr-2" />
+                    新增校友
+                  </Button>
+                </div>
               </div>
               
-              <p className="text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed font-medium">
-                探索並連結全球 EMBA 校友網絡 🌟<br/>
-                建立有意義的專業聯繫，共同成長 🚀
-              </p>
+              <div className="text-center">
+                <p className="text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed font-medium">
+                  探索並連結全球 中山大學EMBA 校友網絡 🌟<br/>
+                  建立有意義的專業聯繫，共同成長 🚀
+                </p>
+              </div>
             </div>
 
             {/* 統計資訊 */}
@@ -481,22 +712,42 @@ export default function NetworkPage() {
                       </p>
 
                       {/* 行動按鈕 */}
-                      <div className="flex gap-3">
-                        <Button 
-                          onClick={() => openProfile(alumni)}
-                          className="flex-1 h-11 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300"
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          查看檔案
-                        </Button>
-                        <Button 
-                          onClick={() => openMessage(alumni)}
-                          variant="outline"
-                          className="flex-1 h-11 border-2 border-blue-200 text-blue-600 hover:bg-blue-50 font-bold rounded-xl"
-                        >
-                          <MessageCircle className="h-4 w-4 mr-2" />
-                          發送訊息
-                        </Button>
+                      <div className="space-y-3">
+                        <div className="flex gap-2">
+                          <Button 
+                            onClick={() => openProfile(alumni)}
+                            className="flex-1 h-11 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300"
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            查看檔案
+                          </Button>
+                          <Button 
+                            onClick={() => openMessage(alumni)}
+                            variant="outline"
+                            className="flex-1 h-11 border-2 border-blue-200 text-blue-600 hover:bg-blue-50 font-bold rounded-xl"
+                          >
+                            <MessageCircle className="h-4 w-4 mr-2" />
+                            發送訊息
+                          </Button>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            onClick={() => openEditDialog(alumni)}
+                            variant="outline"
+                            className="flex-1 h-10 border-2 border-green-200 text-green-600 hover:bg-green-50 font-medium rounded-xl"
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            編輯
+                          </Button>
+                          <Button 
+                            onClick={() => handleDelete(alumni.id)}
+                            variant="outline"
+                            className="flex-1 h-10 border-2 border-red-200 text-red-600 hover:bg-red-50 font-medium rounded-xl"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            刪除
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -709,6 +960,344 @@ export default function NetworkPage() {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* 新增校友對話框 */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              新增校友
+            </DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* 基本資訊 */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-bold text-gray-800 border-b pb-2">基本資訊</h4>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">姓名 *</label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    placeholder="請輸入姓名"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    placeholder="請輸入 Email"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">職位</label>
+                  <Input
+                    value={formData.job_title}
+                    onChange={(e) => setFormData({...formData, job_title: e.target.value})}
+                    placeholder="請輸入職位"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">公司</label>
+                  <Input
+                    value={formData.company}
+                    onChange={(e) => setFormData({...formData, company: e.target.value})}
+                    placeholder="請輸入公司名稱"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">地點</label>
+                  <Select value={formData.location} onValueChange={(value) => setFormData({...formData, location: value})}>
+                    <SelectTrigger className="h-12 rounded-xl border-2 border-gray-200">
+                      <SelectValue placeholder="選擇地點" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="台北市">台北市</SelectItem>
+                      <SelectItem value="台中市">台中市</SelectItem>
+                      <SelectItem value="高雄市">高雄市</SelectItem>
+                      <SelectItem value="新竹市">新竹市</SelectItem>
+                      <SelectItem value="台南市">台南市</SelectItem>
+                      <SelectItem value="香港">香港</SelectItem>
+                      <SelectItem value="新加坡">新加坡</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">畢業年份</label>
+                  <Input
+                    type="number"
+                    value={formData.graduation_year}
+                    onChange={(e) => setFormData({...formData, graduation_year: e.target.value})}
+                    placeholder="請輸入畢業年份"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                    min="2000"
+                    max={new Date().getFullYear() + 5}
+                  />
+                </div>
+              </div>
+              
+              {/* 詳細資訊 */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-bold text-gray-800 border-b pb-2">詳細資訊</h4>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">手機</label>
+                  <Input
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    placeholder="請輸入手機號碼"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">個人簡介</label>
+                  <Textarea
+                    value={formData.bio}
+                    onChange={(e) => setFormData({...formData, bio: e.target.value})}
+                    placeholder="請輸入個人簡介"
+                    rows={4}
+                    className="rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">專業技能（用逗號分隔）</label>
+                  <Input
+                    value={formData.skills.join(", ")}
+                    onChange={(e) => setFormData({...formData, skills: e.target.value.split(",").map(s => s.trim()).filter(Boolean)})}
+                    placeholder="例如：AI科技, 金融投資, 營運管理"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">興趣愛好（用逗號分隔）</label>
+                  <Input
+                    value={formData.interests.join(", ")}
+                    onChange={(e) => setFormData({...formData, interests: e.target.value.split(",").map(s => s.trim()).filter(Boolean)})}
+                    placeholder="例如：高爾夫, 投資, 旅遊"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">頭像網址</label>
+                  <Input
+                    value={formData.avatar_url}
+                    onChange={(e) => setFormData({...formData, avatar_url: e.target.value})}
+                    placeholder="請輸入頭像圖片網址"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex gap-4 pt-6 border-t">
+              <Button 
+                type="submit"
+                className="flex-1 h-12 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-xl"
+              >
+                <Save className="h-5 w-5 mr-2" />
+                新增校友
+              </Button>
+              <Button 
+                type="button"
+                variant="outline" 
+                onClick={() => setIsAddDialogOpen(false)}
+                className="h-12 px-8 border-2 border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl"
+              >
+                <X className="h-5 w-5 mr-2" />
+                取消
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 編輯校友對話框 */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              編輯校友資料
+            </DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* 基本資訊 */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-bold text-gray-800 border-b pb-2">基本資訊</h4>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">姓名 *</label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    placeholder="請輸入姓名"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    placeholder="請輸入 Email"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">職位</label>
+                  <Input
+                    value={formData.job_title}
+                    onChange={(e) => setFormData({...formData, job_title: e.target.value})}
+                    placeholder="請輸入職位"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">公司</label>
+                  <Input
+                    value={formData.company}
+                    onChange={(e) => setFormData({...formData, company: e.target.value})}
+                    placeholder="請輸入公司名稱"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">地點</label>
+                  <Select value={formData.location} onValueChange={(value) => setFormData({...formData, location: value})}>
+                    <SelectTrigger className="h-12 rounded-xl border-2 border-gray-200">
+                      <SelectValue placeholder="選擇地點" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="台北市">台北市</SelectItem>
+                      <SelectItem value="台中市">台中市</SelectItem>
+                      <SelectItem value="高雄市">高雄市</SelectItem>
+                      <SelectItem value="新竹市">新竹市</SelectItem>
+                      <SelectItem value="台南市">台南市</SelectItem>
+                      <SelectItem value="香港">香港</SelectItem>
+                      <SelectItem value="新加坡">新加坡</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">畢業年份</label>
+                  <Input
+                    type="number"
+                    value={formData.graduation_year}
+                    onChange={(e) => setFormData({...formData, graduation_year: e.target.value})}
+                    placeholder="請輸入畢業年份"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                    min="2000"
+                    max={new Date().getFullYear() + 5}
+                  />
+                </div>
+              </div>
+              
+              {/* 詳細資訊 */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-bold text-gray-800 border-b pb-2">詳細資訊</h4>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">手機</label>
+                  <Input
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    placeholder="請輸入手機號碼"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">個人簡介</label>
+                  <Textarea
+                    value={formData.bio}
+                    onChange={(e) => setFormData({...formData, bio: e.target.value})}
+                    placeholder="請輸入個人簡介"
+                    rows={4}
+                    className="rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">專業技能（用逗號分隔）</label>
+                  <Input
+                    value={formData.skills.join(", ")}
+                    onChange={(e) => setFormData({...formData, skills: e.target.value.split(",").map(s => s.trim()).filter(Boolean)})}
+                    placeholder="例如：AI科技, 金融投資, 營運管理"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">興趣愛好（用逗號分隔）</label>
+                  <Input
+                    value={formData.interests.join(", ")}
+                    onChange={(e) => setFormData({...formData, interests: e.target.value.split(",").map(s => s.trim()).filter(Boolean)})}
+                    placeholder="例如：高爾夫, 投資, 旅遊"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">頭像網址</label>
+                  <Input
+                    value={formData.avatar_url}
+                    onChange={(e) => setFormData({...formData, avatar_url: e.target.value})}
+                    placeholder="請輸入頭像圖片網址"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-purple-400"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex gap-4 pt-6 border-t">
+              <Button 
+                type="submit"
+                className="flex-1 h-12 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold rounded-xl"
+              >
+                <Save className="h-5 w-5 mr-2" />
+                儲存修改
+              </Button>
+              <Button 
+                type="button"
+                variant="outline" 
+                onClick={() => setIsEditDialogOpen(false)}
+                className="h-12 px-8 border-2 border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl"
+              >
+                <X className="h-5 w-5 mr-2" />
+                取消
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 

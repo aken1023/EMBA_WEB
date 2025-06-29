@@ -437,7 +437,7 @@ export async function getAlbums() {
       .select(`
         *,
         events(title, date, location),
-        photos(count)
+        media(count)
       `)
       .order("created_at", { ascending: false })
 
@@ -447,6 +447,235 @@ export async function getAlbums() {
   } catch (error) {
     return { data: [], error }
   }
+}
+
+export async function createAlbum(albumData: any) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("albums")
+      .insert([albumData])
+      .select(`
+        *,
+        events(title, date, location),
+        media(count)
+      `)
+      .single()
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error("Error creating album:", error)
+    return { data: null, error }
+  }
+}
+
+export async function updateAlbum(id: string, albumData: any) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("albums")
+      .update(albumData)
+      .eq("id", id)
+      .select(`
+        *,
+        events(title, date, location),
+        media(count)
+      `)
+      .single()
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error("Error updating album:", error)
+    return { data: null, error }
+  }
+}
+
+export async function deleteAlbum(id: string) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { error } = await supabase
+      .from("albums")
+      .delete()
+      .eq("id", id)
+
+    if (error) throw error
+    return { data: null, error: null }
+  } catch (error) {
+    console.error("Error deleting album:", error)
+    return { data: null, error }
+  }
+}
+
+export async function getAlbumById(id: string) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("albums")
+      .select(`
+        *,
+        events(title, date, location),
+        photos(id, url, caption, uploaded_by, created_at)
+      `)
+      .eq("id", id)
+      .single()
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error("Error fetching album:", error)
+    return { data: null, error }
+  }
+}
+
+// 媒體相關函數（照片、影片等）
+export async function getMedia(albumId?: string, mediaType?: string) {
+  if (!checkSupabaseConfig()) {
+    return { data: [], error: new Error("Supabase not configured") }
+  }
+
+  try {
+    let query = supabase
+      .from("media")
+      .select(`
+        *,
+        albums(title),
+        users!media_uploaded_by_fkey(name, avatar_url)
+      `)
+      .order("created_at", { ascending: false })
+
+    if (albumId) {
+      query = query.eq("album_id", albumId)
+    }
+
+    if (mediaType) {
+      query = query.eq("media_type", mediaType)
+    }
+
+    const { data, error } = await query
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error("Error fetching media:", error)
+    return { data: [], error }
+  }
+}
+
+// 為了向後兼容，保留getPhotos函數
+export async function getPhotos(albumId?: string) {
+  return getMedia(albumId, 'image')
+}
+
+// 新增getVideos函數
+export async function getVideos(albumId?: string) {
+  return getMedia(albumId, 'video')
+}
+
+export async function createMedia(mediaData: any) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    // 確保有預設的媒體類型
+    if (!mediaData.media_type) {
+      mediaData.media_type = 'image'
+    }
+
+    const { data, error } = await supabase
+      .from("media")
+      .insert([mediaData])
+      .select(`
+        *,
+        albums(title),
+        users!media_uploaded_by_fkey(name, avatar_url)
+      `)
+      .single()
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error("Error creating media:", error)
+    return { data: null, error }
+  }
+}
+
+// 為了向後兼容，保留createPhoto函數
+export async function createPhoto(photoData: any) {
+  return createMedia({ ...photoData, media_type: 'image' })
+}
+
+// 新增createVideo函數
+export async function createVideo(videoData: any) {
+  return createMedia({ ...videoData, media_type: 'video' })
+}
+
+export async function updateMedia(id: string, mediaData: any) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("media")
+      .update(mediaData)
+      .eq("id", id)
+      .select(`
+        *,
+        albums(title),
+        users!media_uploaded_by_fkey(name, avatar_url)
+      `)
+      .single()
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error("Error updating media:", error)
+    return { data: null, error }
+  }
+}
+
+// 為了向後兼容，保留updatePhoto函數
+export async function updatePhoto(id: string, photoData: any) {
+  return updateMedia(id, photoData)
+}
+
+export async function deleteMedia(id: string) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { error } = await supabase
+      .from("media")
+      .delete()
+      .eq("id", id)
+
+    if (error) throw error
+    return { data: null, error: null }
+  } catch (error) {
+    console.error("Error deleting media:", error)
+    return { data: null, error }
+  }
+}
+
+// 為了向後兼容，保留deletePhoto函數
+export async function deletePhoto(id: string) {
+  return deleteMedia(id)
 }
 
 export async function registerForEvent(eventId: string, userId: string) {
@@ -687,6 +916,113 @@ export async function markNotificationAsRead(notificationId: string) {
 
     return { data, error: null }
   } catch (error) {
+    return { data: null, error }
+  }
+}
+
+// 校友管理 CRUD 函數
+export async function getAllAlumni() {
+  if (!checkSupabaseConfig()) {
+    return { data: [], error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .order("name", { ascending: true })
+
+    if (error) throw error
+    return { data: data || [], error: null }
+  } catch (error) {
+    console.error("Error fetching alumni:", error)
+    return { data: [], error }
+  }
+}
+
+export async function getAlumniById(id: string) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", id)
+      .single()
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error("Error fetching alumni:", error)
+    return { data: null, error }
+  }
+}
+
+export async function createAlumni(alumniData: any) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .insert([{
+        ...alumniData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single()
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error("Error creating alumni:", error)
+    return { data: null, error }
+  }
+}
+
+export async function updateAlumni(id: string, alumniData: any) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .update({
+        ...alumniData,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return { data, error: null }
+  } catch (error) {
+    console.error("Error updating alumni:", error)
+    return { data: null, error }
+  }
+}
+
+export async function deleteAlumni(id: string) {
+  if (!checkSupabaseConfig()) {
+    return { data: null, error: new Error("Supabase not configured") }
+  }
+
+  try {
+    const { error } = await supabase
+      .from("users")
+      .delete()
+      .eq("id", id)
+
+    if (error) throw error
+    return { data: null, error: null }
+  } catch (error) {
+    console.error("Error deleting alumni:", error)
     return { data: null, error }
   }
 }

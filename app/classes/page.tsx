@@ -31,10 +31,10 @@ import {
 // 模擬班級資料
 const classesData = [
   {
-    id: "emba2024",
+    id: "中山大學EMBA2024",
     year: "2024",
     batch: "第15屆",
-    name: "EMBA 2024級",
+    name: "中山大學EMBA 2024級",
     description: "最新一屆的菁英學員，正在學習成長中",
     totalStudents: 45,
     activeStudents: 42,
@@ -52,10 +52,10 @@ const classesData = [
     ]
   },
   {
-    id: "emba2023",
+    id: "中山大學EMBA2023",
     year: "2023",
     batch: "第14屆",
-    name: "EMBA 2023級",
+    name: "中山大學EMBA 2023級",
     description: "充滿活力的一屆，在各領域都有傑出表現",
     totalStudents: 48,
     activeStudents: 46,
@@ -73,10 +73,10 @@ const classesData = [
     ]
   },
   {
-    id: "emba2022",
+    id: "中山大學EMBA2022",
     year: "2022",
     batch: "第13屆",
-    name: "EMBA 2022級",
+    name: "中山大學EMBA 2022級",
     description: "已畢業的優秀學長姐，在職場上發光發熱",
     totalStudents: 50,
     activeStudents: 48,
@@ -94,10 +94,10 @@ const classesData = [
     ]
   },
   {
-    id: "emba2021",
+    id: "中山大學EMBA2021",
     year: "2021",
     batch: "第12屆",
-    name: "EMBA 2021級",
+    name: "中山大學EMBA 2021級",
     description: "疫情期間堅持學習的堅強一屆",
     totalStudents: 44,
     activeStudents: 42,
@@ -182,13 +182,13 @@ export default function ClassesPage() {
             <div className="text-center mb-16">
               <div className="relative inline-block mb-8">
                 <h1 className="text-6xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent leading-tight">
-                  🎓 EMBA 班級
+                  🎓 中山大學EMBA 班級
                 </h1>
                 <div className="absolute -inset-4 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-2xl blur opacity-20"></div>
               </div>
               
               <p className="text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed font-medium">
-                探索各屆 EMBA 班級，認識優秀的學長姐和同學們 ✨<br/>
+                探索各屆 中山大學EMBA 班級，認識優秀的學長姐和同學們 ✨<br/>
                 每一屆都有獨特的故事和傑出的成就 🏆
               </p>
             </div>

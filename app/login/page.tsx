@@ -77,7 +77,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">歡迎回來</CardTitle>
-          <CardDescription>登入您的 EMBA 校友帳戶</CardDescription>
+          <CardDescription>登入您的 中山大學EMBA 校友帳戶</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Error Alert */}

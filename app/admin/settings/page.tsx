@@ -14,9 +14,9 @@ import { Save, Globe, Mail, Shield, Database, Bell, Upload, AlertCircle, CheckCi
 
 export default function SystemSettings() {
   const [settings, setSettings] = useState({
-    siteName: "EMBA 校友聯誼網",
-    siteDescription: "連結全球EMBA校友，打造最具價值的商業人脈網絡平台",
-    contactEmail: "info@emba-alumni.com",
+    siteName: "中山大學EMBA 校友聯誼網",
+    siteDescription: "連結全球中山大學EMBA校友，打造最具價值的商業人脈網絡平台",
+    contactEmail: "info@中山大學EMBA-alumni.com",
     allowRegistration: true,
     requireApproval: true,
     enableNotifications: true,

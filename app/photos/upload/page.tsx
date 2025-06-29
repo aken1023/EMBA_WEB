@@ -69,9 +69,9 @@ export default function PhotoUploadPage() {
     }
   }
 
-  const handleFiles = (files: File[]) => {
-    const newFiles: UploadFile[] = files.map((file) => ({
-      id: Math.random().toString(36).substr(2, 9),
+      const handleFiles = (files: File[]) => {
+      const newFiles: UploadFile[] = files.map((file, index) => ({
+        id: `photo_${Date.now()}_${index}`,
       file,
       preview: URL.createObjectURL(file),
       caption: "",

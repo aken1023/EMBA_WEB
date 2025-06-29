@@ -67,28 +67,46 @@ const config: Config = {
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
-  		keyframes: {
-  			'accordion-down': {
-  				from: {
-  					height: '0'
-  				},
-  				to: {
-  					height: 'var(--radix-accordion-content-height)'
-  				}
-  			},
-  			'accordion-up': {
-  				from: {
-  					height: 'var(--radix-accordion-content-height)'
-  				},
-  				to: {
-  					height: '0'
-  				}
-  			}
-  		},
-  		animation: {
-  			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out'
-  		}
+  				keyframes: {
+			'accordion-down': {
+				from: {
+					height: '0'
+				},
+				to: {
+					height: 'var(--radix-accordion-content-height)'
+				}
+			},
+			'accordion-up': {
+				from: {
+					height: 'var(--radix-accordion-content-height)'
+				},
+				to: {
+					height: '0'
+				}
+			},
+			'float': {
+				'0%, 100%': {
+					transform: 'translateY(0px)'
+				},
+				'50%': {
+					transform: 'translateY(-20px)'
+				}
+			},
+			'float-delayed': {
+				'0%, 100%': {
+					transform: 'translateY(0px)'
+				},
+				'50%': {
+					transform: 'translateY(-15px)'
+				}
+			}
+		},
+		animation: {
+			'accordion-down': 'accordion-down 0.2s ease-out',
+			'accordion-up': 'accordion-up 0.2s ease-out',
+			'float': 'float 6s ease-in-out infinite',
+			'float-delayed': 'float-delayed 8s ease-in-out infinite'
+		}
   	}
   },
   plugins: [require("tailwindcss-animate")],

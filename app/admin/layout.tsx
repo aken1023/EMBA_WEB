@@ -157,7 +157,7 @@ export default function AdminLayout({
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">
-                  EMBA 管理後台
+                  中山大學EMBA 管理後台
                 </h1>
                 <p className="text-sm text-gray-500">
                   管理系統數據與用戶內容

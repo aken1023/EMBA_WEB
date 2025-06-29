@@ -24,6 +24,7 @@ const navigation = [
   { name: "人脈", href: "/network" },
   { name: "論文", href: "/papers" },
   { name: "相簿", href: "/photos" },
+  { name: "我們的頭目", href: "/leader" },
 ]
 
 export default function Header() {
@@ -51,7 +52,7 @@ export default function Header() {
       <div className="container flex h-16 items-center">
         <div className="mr-4 hidden md:flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <span className="hidden font-bold sm:inline-block text-xl">EMBA 校友網</span>
+            <span className="hidden font-bold sm:inline-block text-xl">中山大學EMBA 校友網</span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
             {navigation.map((item) => (
@@ -80,7 +81,7 @@ export default function Header() {
           </SheetTrigger>
           <SheetContent side="left" className="pr-0">
             <Link href="/" className="flex items-center" onClick={() => setIsOpen(false)}>
-              <span className="font-bold">EMBA 校友網</span>
+              <span className="font-bold">中山大學EMBA 校友網</span>
             </Link>
             <div className="my-4 h-[calc(100vh-8rem)] pb-10 pl-6">
               <div className="flex flex-col space-y-3">

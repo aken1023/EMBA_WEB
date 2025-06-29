@@ -101,7 +101,7 @@ export default function RegisterPage() {
       <Card className="w-full max-w-lg">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">加入校友網</CardTitle>
-          <CardDescription>建立您的 EMBA 校友帳戶，開始連結全球人脈</CardDescription>
+          <CardDescription>建立您的 中山大學EMBA 校友帳戶，開始連結全球人脈</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Error Alert */}

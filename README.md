@@ -1,8 +1,8 @@
-# Emba alumni website
+# 中山大學EMBA alumni website
 
 *Automatically synced with your [v0.dev](https://v0.dev) deployments*
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/akens-projects-fce998a9/v0-emba-alumni-website)
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/akens-projects-fce998a9/v0-中山大學EMBA-alumni-website)
 [![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/aQVZqwfs8BK)
 
 ## Overview
@@ -14,7 +14,7 @@ Any changes you make to your deployed app will be automatically pushed to this r
 
 Your project is live at:
 
-**[https://vercel.com/akens-projects-fce998a9/v0-emba-alumni-website](https://vercel.com/akens-projects-fce998a9/v0-emba-alumni-website)**
+**[https://vercel.com/akens-projects-fce998a9/v0-中山大學EMBA-alumni-website](https://vercel.com/akens-projects-fce998a9/v0-中山大學EMBA-alumni-website)**
 
 ## Build your app
 

@@ -21,7 +21,7 @@ export default function HomePage() {
           {/* 主標題 */}
           <div className="relative inline-block mb-8">
             <h1 className="text-7xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent mb-6 leading-tight">
-              EMBA 校友網
+              中山大學EMBA 明門校友網
             </h1>
             <div className="absolute -inset-4 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-2xl blur opacity-20"></div>
           </div>
@@ -31,7 +31,7 @@ export default function HomePage() {
           </h2>
           
           <p className="text-2xl text-gray-600 mb-12 max-w-4xl mx-auto leading-relaxed font-medium">
-            EMBA 校友專屬平台，促進校友間的交流與合作，分享經驗與資源，建立持久的商業網絡。
+            中山大學明門校友專屬平台，促進校友間的交流與合作，分享經驗與資源，建立持久的商業網絡。
             💼 讓我們一起在這個充滿活力的社群中成長！ 🚀
           </p>
           
@@ -185,6 +185,26 @@ export default function HomePage() {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* 我們的頭目 */}
+            <Card className="group hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 bg-white/90 backdrop-blur-sm border-0 rounded-3xl overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-yellow-50 to-orange-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <CardHeader className="relative p-8">
+                <div className="w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <Users className="h-8 w-8 text-white" />
+                </div>
+                <CardTitle className="text-2xl font-bold text-gray-800 mb-3 group-hover:text-yellow-600 transition-colors">我們的頭目</CardTitle>
+                <CardDescription className="text-lg text-gray-600 leading-relaxed">認識我們的領導者，了解學術背景與專業成就</CardDescription>
+              </CardHeader>
+              <CardContent className="relative p-8 pt-0">
+                <Button className="w-full h-12 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300" asChild>
+                  <Link href="/leader">
+                    認識頭目
+                    <ArrowRight className="h-5 w-5 ml-2" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
@@ -205,10 +225,10 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
             <div className="text-center group">
               <div className="relative inline-block">
-                <div className="text-6xl font-bold text-white mb-4 group-hover:scale-110 transition-transform duration-300">500+</div>
+                <div className="text-6xl font-bold text-white mb-4 group-hover:scale-110 transition-transform duration-300">2500+</div>
                 <Sparkles className="absolute -top-2 -right-2 h-8 w-8 text-yellow-300 animate-pulse" />
               </div>
-              <div className="text-xl text-white/90 font-semibold">註冊校友</div>
+              <div className="text-xl text-white/90 font-semibold">串聯校友</div>
               <div className="text-white/70 mt-2">持續增長中</div>
             </div>
             

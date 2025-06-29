@@ -7,9 +7,9 @@ export default function Footer() {
       <div className="max-w-6xl mx-auto px-4 py-12">
         <div className="grid md:grid-cols-4 gap-8">
           <div className="col-span-1 md:col-span-2">
-            <h3 className="text-xl font-bold mb-4">EMBA 校友聯誼網</h3>
+            <h3 className="text-xl font-bold mb-4">中山大學EMBA 校友聯誼網</h3>
             <p className="text-gray-300 mb-4">
-              連結全球EMBA校友，打造最具價值的商業人脈網絡平台。 分享智慧、創造機會、共同成長。
+              連結全球中山大學EMBA校友，打造最具價值的商業人脈網絡平台。 分享智慧、創造機會、共同成長。
             </p>
             <div className="flex space-x-4">
               <Link href="#" className="text-gray-300 hover:text-white">
@@ -60,22 +60,22 @@ export default function Footer() {
             <ul className="space-y-2 text-gray-300">
               <li className="flex items-center">
                 <Mail className="h-4 w-4 mr-2" />
-                info@emba-alumni.com
+                aken1023@gmail.com
               </li>
               <li className="flex items-center">
                 <Phone className="h-4 w-4 mr-2" />
-                +886-2-1234-5678
+                +886-912345678
               </li>
               <li className="flex items-center">
                 <MapPin className="h-4 w-4 mr-2" />
-                台北市信義區信義路五段7號
+                高雄市鼓山區蓮海路70號
               </li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-gray-300 text-sm">© 2024 EMBA 校友聯誼網. All rights reserved.</p>
+          <p className="text-gray-300 text-sm">© 2025 中山大學EMBA 校友聯誼網  作者  E23 DBA6 Aken. All rights reserved.</p>
           <div className="flex space-x-4 mt-4 md:mt-0">
             <Link href="/privacy" className="text-gray-300 hover:text-white text-sm">
               隱私政策

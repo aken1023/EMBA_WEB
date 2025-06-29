@@ -11,8 +11,8 @@ import Footer from "@/components/layout/footer"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "EMBA 校友網站",
-  description: "EMBA 校友交流平台",
+  title: "中山大學EMBA 校友網站",
+  description: "中山大學EMBA 校友交流平台",
     generator: 'v0.dev'
 }
 
@@ -29,7 +29,7 @@ export default function RootLayout({
           defaultTheme="system" 
           enableSystem 
           disableTransitionOnChange
-          storageKey="emba-theme"
+          storageKey="中山大學EMBA-theme"
         >
           <AuthProvider>
             <div className="min-h-screen flex flex-col">

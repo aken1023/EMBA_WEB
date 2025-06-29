@@ -19,7 +19,7 @@ DELETE FROM users;
 
 -- 插入測試用戶
 INSERT INTO users (id, email, name, avatar_url, phone, company, job_title, graduation_year, location, website, bio, skills, interests) VALUES
-('11111111-1111-1111-1111-111111111111', 'admin@emba.edu.tw', '系統管理員', '/business-executive.png', '02-12345678', '台灣大學', '系統管理員', 2020, '台北市', 'https://admin.emba.edu.tw', '負責系統維護與管理', ARRAY['系統管理', '資料庫', '網路安全'], ARRAY['科技', '管理']),
+('11111111-1111-1111-1111-111111111111', 'admin@中山大學EMBA.edu.tw', '系統管理員', '/business-executive.png', '02-12345678', '台灣大學', '系統管理員', 2020, '台北市', 'https://admin.中山大學EMBA.edu.tw', '負責系統維護與管理', ARRAY['系統管理', '資料庫', '網路安全'], ARRAY['科技', '管理']),
 ('22222222-2222-2222-2222-222222222222', 'wang.ming@example.com', '王小明', '/startup-founder.png', '0912-345-678', '創新科技公司', 'CEO', 2021, '台北市', 'https://innovate.com.tw', '專注於數位轉型與創新技術的應用', ARRAY['創業', '數位轉型', '策略規劃'], ARRAY['創業', '科技', '投資']),
 ('33333333-3333-3333-3333-333333333333', 'li.mei@example.com', '李美玲', '/business-executive.png', '0923-456-789', '金融投資集團', '投資總監', 2019, '台北市', 'https://finance.com.tw', '具有豐富的投資經驗與財務分析專業', ARRAY['金融分析', '投資策略', 'ESG'], ARRAY['投資', '財經', '永續']),
 ('44444444-4444-4444-4444-444444444444', 'zhang.hua@example.com', '張志華', '/placeholder-fqpq1.png', '0934-567-890', '管理顧問公司', '資深顧問', 2020, '新竹市', 'https://consulting.com.tw', '專精於企業管理與營運優化', ARRAY['管理顧問', '流程優化', '專案管理'], ARRAY['管理', '顧問', '教育']),
@@ -36,11 +36,11 @@ INSERT INTO forum_categories (id, name, description, color) VALUES
 
 -- 插入班級資料
 INSERT INTO classes (id, year, name, description) VALUES
-('c1111111-1111-1111-1111-111111111111', 2024, 'EMBA 2024級', '2024年入學的EMBA學員'),
-('c2222222-2222-2222-2222-222222222222', 2023, 'EMBA 2023級', '2023年入學的EMBA學員'),
-('c3333333-3333-3333-3333-333333333333', 2022, 'EMBA 2022級', '2022年入學的EMBA學員'),
-('c4444444-4444-4444-4444-444444444444', 2021, 'EMBA 2021級', '2021年入學的EMBA學員'),
-('c5555555-5555-5555-5555-555555555555', 2020, 'EMBA 2020級', '2020年入學的EMBA學員');
+('c1111111-1111-1111-1111-111111111111', 2024, '中山大學EMBA 2024級', '2024年入學的中山大學EMBA學員'),
+('c2222222-2222-2222-2222-222222222222', 2023, '中山大學EMBA 2023級', '2023年入學的中山大學EMBA學員'),
+('c3333333-3333-3333-3333-333333333333', 2022, '中山大學EMBA 2022級', '2022年入學的中山大學EMBA學員'),
+('c4444444-4444-4444-4444-444444444444', 2021, '中山大學EMBA 2021級', '2021年入學的中山大學EMBA學員'),
+('c5555555-5555-5555-5555-555555555555', 2020, '中山大學EMBA 2020級', '2020年入學的中山大學EMBA學員');
 
 -- 插入活動資料
 INSERT INTO events (id, title, description, date, time, location, max_attendees, price, category, status, image_url, created_by) VALUES
